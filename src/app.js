@@ -1,7 +1,7 @@
 import { ACTIONS, DATA_VERSION, FOCUSES, STATS, TITLE, WORLDS, focusOptions, worldOf } from './data.js';
 import { actionAvailability, createRun, nextDecision, relationship, resolveDecision, restore, setFocus, snapshot, startAction, step, summary } from './engine.js';
 import { drawScene } from './scene.js';
-import { HAIRS, OUTFITS, characterLayers, normalizeAppearance, preloadCharacters } from './characters.js';
+import { HAIRS, TOPS, BOTTOMS, characterLayers, layerClip, normalizeAppearance, preloadCharacters } from './characters.js';
 
 const KEY = 'earth2000.run.v1', META = 'earth2000.history.v1';
 const APPEARANCE_KEY = 'earth2000.appearance.v1';
@@ -44,7 +44,11 @@ function homeMarkup() {
 }
 function panelBody() {
   const world = run ? worldOf(run) : null;
-  if (panel === 'appearance') return { title: 'キャラクター素材', body: `<p class="sheet-intro">あなたの素材を、素体 → 衣装 → 髪型の順に重ねています。元の24×32pxを保って表示します。</p><div class="avatar-stage"><div class="avatar-stack" role="img" aria-label="選択中の髪型と会社員の衣装を重ねたキャラクター">${characterLayers(appearance).map(l => `<img src="${l.url}" alt="" width="24" height="32" draggable="false">`).join('')}</div><p>24 × 32 px · あなたのキャラクター</p></div><h3 class="appearance-heading">髪型</h3><div class="appearance-grid">${HAIRS.map(h => `<button class="appearance-choice ${appearance.hair === h.id ? 'selected' : ''}" data-action="appearance" data-kind="hair" data-id="${h.id}" aria-pressed="${appearance.hair === h.id}"><div class="avatar-stack small" aria-hidden="true">${characterLayers({ ...appearance, hair: h.id }).map(l => `<img src="${l.url}" alt="" width="24" height="32" draggable="false">`).join('')}</div><span>${h.label}</span></button>`).join('')}</div><h3 class="appearance-heading">衣装</h3><div class="appearance-grid outfits">${OUTFITS.map(o => `<button class="appearance-choice ${appearance.outfit === o.id ? 'selected' : ''}" data-action="appearance" data-kind="outfit" data-id="${o.id}" aria-pressed="${appearance.outfit === o.id}"><div class="avatar-stack small" aria-hidden="true">${characterLayers({ ...appearance, outfit: o.id }).map(l => `<img src="${l.url}" alt="" width="24" height="32" draggable="false">`).join('')}</div><span>${o.label}</span></button>`).join('')}</div><p class="notice">この衣装は近現代用の素材サンプルです。ゲーム内では1850年以降・16歳以上の主人公に適用し、職業専用衣装の割り当ては今後追加します。古い時代・子ども・周囲の人物は仮表示です。選んだ組み合わせは端末内に保存し、進行中の人生にも反映します。</p>` };
+  if (panel === 'appearance') {
+    const preview = (v, small = false) => `<div class="avatar-stack ${small ? 'small' : ''}" aria-hidden="true">${characterLayers(v).map(l => `<img src="${l.url}" alt="" width="24" height="32" draggable="false" style="clip-path:${layerClip(l)}">`).join('')}</div>`;
+    const choices = (defs, kind) => `<div class="appearance-grid">${defs.map(d => `<button class="appearance-choice ${appearance[kind] === d.id ? 'selected' : ''}" data-action="appearance" data-kind="${kind}" data-id="${d.id}" aria-pressed="${appearance[kind] === d.id}">${preview({ ...appearance, [kind]: d.id }, true)}<span>${d.label}</span></button>`).join('')}</div>`;
+    return { title: 'キャラクター素材', body: `<p class="sheet-intro">髪型・上着・ズボンをそれぞれ選べます。腰の境界をそろえた元画像を、色やドットを変えずに重ねています。</p><div class="avatar-stage"><div role="img" aria-label="選択中の髪型・上着・ズボンを組み合わせたキャラクター">${preview(appearance)}</div><p>24 × 32 px · あなたのキャラクター</p></div><h3 class="appearance-heading">髪型</h3>${choices(HAIRS, 'hair')}<h3 class="appearance-heading">上着</h3>${choices(TOPS, 'top')}<h3 class="appearance-heading">ズボン</h3>${choices(BOTTOMS, 'bottom')}<p class="notice">近現代用の素材サンプルです。ゲーム内では1850年以降・16歳以上の主人公に適用します。古い時代・子ども・周囲の人物は仮表示です。組み合わせは端末内に保存し、進行中の人生にも反映します。元画像はそのまま保管し、表示時だけ上半分と下半分を使い分けます。</p>` };
+  }
   if (panel === 'birth') return { title: 'あなたの人生が、はじまる。', body: `<p class="end-quote">${run.birthYear}年、${esc(world.region)}。<br>名前は、${esc(run.name)}。</p><div class="summary-grid"><div>生まれた場所<strong>${esc(world.region)}</strong></div><div>家庭の暮らし<strong>${esc(world.family)}</strong></div></div><p class="sheet-intro">まだ知らない日々が、この先にある。生活方針を選び、大切な場面で立ち止まりながら、一人の人生を見届けましょう。</p><p class="notice">この試作は歴史・統計の仮モデルです。乳幼児期も含め、人生が早く終わる場合があります。出生サンプルは史実の国や人物を再現しません。</p><button class="big-button" data-action="begin">日々をはじめる　→</button>` };
   if (panel === 'decision' && run.pending) return { title: run.pending.title, body: `<p class="eyebrow" style="margin-top:16px">${run.pending.age}歳 · 時間は止まっています</p><p class="sheet-intro">${esc(run.pending.text)}</p><div class="choice-list">${run.pending.options.map(o => `<button class="choice" data-action="choose" data-id="${o.id}" data-decision="${run.pending.id}" ${run.money < o.cost ? 'disabled' : ''}><strong>${esc(o.name)}</strong><p>${esc(o.description)}</p><small>確定時の費用：${o.cost ? o.cost + '生活点' : 'なし'}${run.money < o.cost ? ' · 資金が足りません' : ''}</small></button>`).join('')}</div><p class="sheet-intro">×でたたんで、人物や家計を確認できます。選ぶまで時間は進みません。</p>` };
   if (panel === 'focus') return { title: '暮らしで大切にすること', body: `<p class="sheet-intro">重点は一つ。変更するまで続きます。実際に使える時間に応じて効果が変わり、変更前の期間には遡りません。</p><div class="choice-list">${focusOptions(run).map(f => `<button class="choice ${run.focus === f.id ? 'selected' : ''}" data-action="focus" data-id="${f.id}"><strong>${f.icon} ${f.name}${run.focus === f.id ? ' · 選択中' : ''}</strong><p>${f.text}</p></button>`).join('')}</div>` };
@@ -100,7 +104,7 @@ document.addEventListener('click', event => {
   const button = event.target.closest('[data-action]'); if (!button || button.disabled) return;
   const a = button.dataset.action, id = button.dataset.id;
   if (a === 'appearance') {
-    if (!['hair', 'outfit'].includes(button.dataset.kind)) return;
+    if (!['hair', 'top', 'bottom'].includes(button.dataset.kind)) return;
     appearance = normalizeAppearance({ ...appearance, [button.dataset.kind]: id });
     try { localStorage.setItem(APPEARANCE_KEY, JSON.stringify(appearance)); } catch { toast('見た目を保存できません。今回の表示には反映しました。'); }
     const y = document.querySelector('.sheet')?.scrollTop || 0;

@@ -39,11 +39,15 @@ test('application wires birth, pause, decisions, actions, funds, export and titl
   click('start', { id: 'study' }); assert.equal(state().actions.length, 1); assert.equal(state().money, before - 15);
   click('start', { id: 'study' }); assert.equal(state().money, before - 15);
   const appearanceTick = state().tick;
+  const beforeAppearance = stored.get('earth2000.run.v1');
   click('menu', { panel: 'appearance' }); assert.match(sheetRoot.innerHTML, /キャラクター素材/);
   click('appearance', { kind: 'hair', id: 'hair-4' });
   assert.equal(JSON.parse(stored.get('earth2000.appearance.v1')).hair, 'hair-4');
-  click('appearance', { kind: 'outfit', id: 'office-2' });
-  assert.equal(JSON.parse(stored.get('earth2000.appearance.v1')).outfit, 'office-2');
+  click('appearance', { kind: 'top', id: 'casual-1' });
+  click('appearance', { kind: 'bottom', id: 'casual-2' });
+  const look = JSON.parse(stored.get('earth2000.appearance.v1'));
+  assert.equal(look.top, 'casual-1'); assert.equal(look.bottom, 'casual-2');
+  assert.equal(stored.get('earth2000.run.v1'), beforeAppearance);
   assert.equal(state().tick, appearanceTick);
   click('menu', { panel: 'settings' }); click('export'); assert.ok(downloaded);
   click('title'); assert.match(app.innerHTML, /つづきの人生へ/);
