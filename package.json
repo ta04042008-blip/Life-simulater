@@ -1,0 +1,11 @@
+{
+  "name": "someone-on-earth-in-2000-years",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/engine.js && node --check src/app.js && node --check src/scene.js",
+    "start": "python3 -m http.server 8080"
+  }
+}
