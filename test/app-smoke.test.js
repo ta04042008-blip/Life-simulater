@@ -38,6 +38,13 @@ test('application wires birth, pause, decisions, actions, funds, export and titl
   click('menu', { panel: 'actions' }); const before = state().money;
   click('start', { id: 'study' }); assert.equal(state().actions.length, 1); assert.equal(state().money, before - 15);
   click('start', { id: 'study' }); assert.equal(state().money, before - 15);
+  const appearanceTick = state().tick;
+  click('menu', { panel: 'appearance' }); assert.match(sheetRoot.innerHTML, /キャラクター素材/);
+  click('appearance', { kind: 'hair', id: 'hair-4' });
+  assert.equal(JSON.parse(stored.get('earth2000.appearance.v1')).hair, 'hair-4');
+  click('appearance', { kind: 'outfit', id: 'office-2' });
+  assert.equal(JSON.parse(stored.get('earth2000.appearance.v1')).outfit, 'office-2');
+  assert.equal(state().tick, appearanceTick);
   click('menu', { panel: 'settings' }); click('export'); assert.ok(downloaded);
   click('title'); assert.match(app.innerHTML, /つづきの人生へ/);
   click('continue'); assert.match(app.innerHTML, /現在の生活方針/);
