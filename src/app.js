@@ -1,8 +1,12 @@
 import { ACTIONS, DATA_VERSION, FOCUSES, STATS, TITLE, WORLDS, focusOptions, worldOf } from './data.js';
 import { actionAvailability, createRun, nextDecision, relationship, resolveDecision, restore, setFocus, snapshot, startAction, step, summary } from './engine.js';
 import { drawScene } from './scene.js';
+import { HAIRS, OUTFITS, characterLayers, normalizeAppearance, preloadCharacters } from './characters.js';
 
 const KEY = 'earth2000.run.v1', META = 'earth2000.history.v1';
+const APPEARANCE_KEY = 'earth2000.appearance.v1';
+let appearance = normalizeAppearance(null);
+try { appearance = normalizeAppearance(JSON.parse(localStorage.getItem(APPEARANCE_KEY) || 'null')); } catch { /* Bad display settings never replace the current life. */ }
 const root = document.querySelector('#app');
 let run = null, screen = 'title', panel = null, playing = false, speed = 1, returnToPlay = false, tucked = false, storageError = '', lastTime = 0, progress = 0, selectedWorld = '', previousFocus = null;
 let history = [];
@@ -31,7 +35,7 @@ function openPanel(name, detail = '') { previousFocus = document.activeElement; 
 let panelDetail = '';
 function closePanel() { panel = null; playing = returnToPlay && !run?.pending && !run?.dead; returnToPlay = false; render(); if (previousFocus?.isConnected) previousFocus.focus(); else document.querySelector('[data-action="menu"]')?.focus(); }
 function titleMarkup() {
-  return `<main class="title-screen"><div class="title-top"><span>A LIFE, SOMEWHERE ON EARTH</span><span>試作 0.1</span></div><p class="title-kicker">名もない人生に、物語がある。</p><h1><span class="number">2000</span>年の<br>地球上の誰か1人。</h1><p class="title-subtitle">生まれる場所も、時代も、選べない。<br>それでも、あなたにしかない日々がある。</p><div class="scene-frame title-scene"><div class="scene-scroll"><canvas id="scene" role="img" aria-label="家と暮らしを描いた横長のピクセル風景"></canvas></div><span class="scene-caption">時代を越えて、暮らしの中へ</span></div><div class="title-actions">${run ? `<button class="big-button" data-action="continue">${run.dead ? 'この人生を振り返る' : 'つづきの人生へ'}　→</button>` : ''}<label class="field-label" for="world">試作の出生サンプル</label><select id="world" class="select-field"><option value="">いずれかのサンプルに生まれる</option>${WORLDS.map(w => `<option value="${w.id}" ${selectedWorld === w.id ? 'selected' : ''}>${w.year}年 · ${esc(w.region)}</option>`).join('')}</select><button class="big-button ${run ? 'secondary' : ''}" data-action="new">新しい人生をはじめる　↗</button><button class="big-button secondary" data-action="menu" data-panel="past">これまでの人生</button><button class="text-button" data-action="menu" data-panel="settings" style="display:block;margin:18px auto">設定・保存データ・この試作について</button>${storageError ? `<p class="notice">${esc(storageError)}<br>新しく始めるまで保存済みデータは上書きしません。</p>` : ''}<p class="title-note">6つの地域・年代サンプルを収録した試作版。<br>出生抽選はサンプル間の簡易抽選です。<br>歴史・人口・所得・死亡率は未較正の仮設定です。</p></div></main>`;
+  return `<main class="title-screen"><div class="title-top"><span>A LIFE, SOMEWHERE ON EARTH</span><span>試作 0.1</span></div><p class="title-kicker">名もない人生に、物語がある。</p><h1><span class="number">2000</span>年の<br>地球上の誰か1人。</h1><p class="title-subtitle">生まれる場所も、時代も、選べない。<br>それでも、あなたにしかない日々がある。</p><div class="scene-frame title-scene"><div class="scene-scroll"><canvas id="scene" role="img" aria-label="家と暮らしを描いた横長のピクセル風景"></canvas></div><span class="scene-caption">時代を越えて、暮らしの中へ</span></div><div class="title-actions">${run ? `<button class="big-button" data-action="continue">${run.dead ? 'この人生を振り返る' : 'つづきの人生へ'}　→</button>` : ''}<label class="field-label" for="world">試作の出生サンプル</label><select id="world" class="select-field"><option value="">いずれかのサンプルに生まれる</option>${WORLDS.map(w => `<option value="${w.id}" ${selectedWorld === w.id ? 'selected' : ''}>${w.year}年 · ${esc(w.region)}</option>`).join('')}</select><button class="big-button ${run ? 'secondary' : ''}" data-action="new">新しい人生をはじめる　↗</button><button class="big-button secondary" data-action="menu" data-panel="past">これまでの人生</button><button class="big-button secondary" data-action="menu" data-panel="appearance">キャラクター素材を見る</button><button class="text-button" data-action="menu" data-panel="settings" style="display:block;margin:18px auto">設定・保存データ・この試作について</button>${storageError ? `<p class="notice">${esc(storageError)}<br>新しく始めるまで保存済みデータは上書きしません。</p>` : ''}<p class="title-note">6つの地域・年代サンプルを収録した試作版。<br>出生抽選はサンプル間の簡易抽選です。<br>歴史・人口・所得・死亡率は未較正の仮設定です。</p></div></main>`;
 }
 function logMarkup(entries) { return entries.map(e => `<div class="event"><span class="event-icon" aria-hidden="true">${esc(e.icon)}</span><span class="event-age">${e.age}歳</span><div class="event-text">${esc(e.text)}</div></div>`).join(''); }
 function homeMarkup() {
@@ -40,6 +44,7 @@ function homeMarkup() {
 }
 function panelBody() {
   const world = run ? worldOf(run) : null;
+  if (panel === 'appearance') return { title: 'キャラクター素材', body: `<p class="sheet-intro">あなたの素材を、素体 → 衣装 → 髪型の順に重ねています。元の24×32pxを保って表示します。</p><div class="avatar-stage"><div class="avatar-stack" role="img" aria-label="選択中の髪型と会社員の衣装を重ねたキャラクター">${characterLayers(appearance).map(l => `<img src="${l.url}" alt="" width="24" height="32" draggable="false">`).join('')}</div><p>24 × 32 px · あなたのキャラクター</p></div><h3 class="appearance-heading">髪型</h3><div class="appearance-grid">${HAIRS.map(h => `<button class="appearance-choice ${appearance.hair === h.id ? 'selected' : ''}" data-action="appearance" data-kind="hair" data-id="${h.id}" aria-pressed="${appearance.hair === h.id}"><div class="avatar-stack small" aria-hidden="true">${characterLayers({ ...appearance, hair: h.id }).map(l => `<img src="${l.url}" alt="" width="24" height="32" draggable="false">`).join('')}</div><span>${h.label}</span></button>`).join('')}</div><h3 class="appearance-heading">衣装</h3><div class="appearance-grid outfits">${OUTFITS.map(o => `<button class="appearance-choice ${appearance.outfit === o.id ? 'selected' : ''}" data-action="appearance" data-kind="outfit" data-id="${o.id}" aria-pressed="${appearance.outfit === o.id}"><div class="avatar-stack small" aria-hidden="true">${characterLayers({ ...appearance, outfit: o.id }).map(l => `<img src="${l.url}" alt="" width="24" height="32" draggable="false">`).join('')}</div><span>${o.label}</span></button>`).join('')}</div><p class="notice">この衣装は近現代用の素材サンプルです。ゲーム内では1850年以降・16歳以上の主人公に適用し、職業専用衣装の割り当ては今後追加します。古い時代・子ども・周囲の人物は仮表示です。選んだ組み合わせは端末内に保存し、進行中の人生にも反映します。</p>` };
   if (panel === 'birth') return { title: 'あなたの人生が、はじまる。', body: `<p class="end-quote">${run.birthYear}年、${esc(world.region)}。<br>名前は、${esc(run.name)}。</p><div class="summary-grid"><div>生まれた場所<strong>${esc(world.region)}</strong></div><div>家庭の暮らし<strong>${esc(world.family)}</strong></div></div><p class="sheet-intro">まだ知らない日々が、この先にある。生活方針を選び、大切な場面で立ち止まりながら、一人の人生を見届けましょう。</p><p class="notice">この試作は歴史・統計の仮モデルです。乳幼児期も含め、人生が早く終わる場合があります。出生サンプルは史実の国や人物を再現しません。</p><button class="big-button" data-action="begin">日々をはじめる　→</button>` };
   if (panel === 'decision' && run.pending) return { title: run.pending.title, body: `<p class="eyebrow" style="margin-top:16px">${run.pending.age}歳 · 時間は止まっています</p><p class="sheet-intro">${esc(run.pending.text)}</p><div class="choice-list">${run.pending.options.map(o => `<button class="choice" data-action="choose" data-id="${o.id}" data-decision="${run.pending.id}" ${run.money < o.cost ? 'disabled' : ''}><strong>${esc(o.name)}</strong><p>${esc(o.description)}</p><small>確定時の費用：${o.cost ? o.cost + '生活点' : 'なし'}${run.money < o.cost ? ' · 資金が足りません' : ''}</small></button>`).join('')}</div><p class="sheet-intro">×でたたんで、人物や家計を確認できます。選ぶまで時間は進みません。</p>` };
   if (panel === 'focus') return { title: '暮らしで大切にすること', body: `<p class="sheet-intro">重点は一つ。変更するまで続きます。実際に使える時間に応じて効果が変わり、変更前の期間には遡りません。</p><div class="choice-list">${focusOptions(run).map(f => `<button class="choice ${run.focus === f.id ? 'selected' : ''}" data-action="focus" data-id="${f.id}"><strong>${f.icon} ${f.name}${run.focus === f.id ? ' · 選択中' : ''}</strong><p>${f.text}</p></button>`).join('')}</div>` };
@@ -62,7 +67,7 @@ function panelBody() {
   }
   if (panel === 'past') return { title: 'これまでの人生', body: history.length ? [...history].reverse().map(h => `<article class="row-card"><h3>${esc(h.name)} · ${h.age}年の人生</h3><p>${h.year}年生まれ · ${esc(h.region)}<br>大切にしたこと：${esc(h.focus)}<br>${esc(h.job)}</p></article>`).join('') : '<p class="empty">まだ記録はありません。終えた人生の要約が、ここに残ります。</p>' };
   if (panel === 'confirm-new') return { title: '新しい人生をはじめますか？', body: `<p class="sheet-intro">${run && !run.dead ? '進行中の人生は、新しい人生で置き換わります。先に書き出して保管できます。' : storageError ? '読み取れなかった保存データが、新しいデータで置き換わります。' : '前の人生の要約は記録に残ります。'}</p>${run ? '<button class="big-button secondary" data-action="export">先に保存データを書き出す</button>' : ''}<button class="big-button" data-action="birth">新しい人生をはじめる</button><button class="big-button secondary" data-action="close">今は戻る</button>` };
-  return { title: '設定と、この試作について', body: `<p class="sheet-intro">${TITLE}<br>試作 v0.1 · ${DATA_VERSION}</p><div class="notice">実装済み：6項目、生活方針、期間付き行動、決断、人物、簡易家計、人生終了、保存・再開。<br><br>未実装：2000年間・全地球の網羅、史実イベント、人口に沿った抽選、正確な死亡率・所得、自給経済の詳細、才能・性格・才能の芽。<br><br>人物・年代・生計・死亡率は仮設定です。最長110歳は試作の終了保証であり、現実の寿命上限ではありません。</div><button class="big-button secondary" data-action="export" ${run ? '' : 'disabled'}>進行中の人生を書き出す（JSON）</button><label class="file-label">保存データを読み込む<input id="import-file" type="file" accept="application/json,.json"></label><p class="sheet-intro">読み込み前に確認します。端末内保存のため、ブラウザのデータ削除や端末変更で記録が失われます。書き出しには現在の人生が含まれ、通算記録は含まれません。</p><details><summary>操作のヒント</summary><p>再生で日々が進み、大切な決断で止まります。「次の決断まで」は結果を変えずに待ち時間を省略します。詳細画面を開いている間や、アプリを離れている間は進みません。<br>生活方針は変更まで継続。選択中の方針以外の生活も続きます。6歳から学びや交流などを自分で始められます。</p></details>${screen === 'game' ? '<button class="big-button secondary" data-action="title">保存してタイトルへ</button>' : ''}` };
+  return { title: '設定と、この試作について', body: `<p class="sheet-intro">${TITLE}<br>試作 v0.1 · ${DATA_VERSION}</p><div class="notice">実装済み：6項目、生活方針、期間付き行動、決断、人物、簡易家計、人生終了、保存・再開。<br><br>未実装：2000年間・全地球の網羅、史実イベント、人口に沿った抽選、正確な死亡率・所得、自給経済の詳細、才能・性格・才能の芽。<br><br>人物・年代・生計・死亡率は仮設定です。最長110歳は試作の終了保証であり、現実の寿命上限ではありません。</div><button class="big-button secondary" data-action="menu" data-panel="appearance">キャラクター素材・見た目の変更</button><button class="big-button secondary" data-action="export" ${run ? '' : 'disabled'}>進行中の人生を書き出す（JSON）</button><label class="file-label">保存データを読み込む<input id="import-file" type="file" accept="application/json,.json"></label><p class="sheet-intro">読み込み前に確認します。端末内保存のため、ブラウザのデータ削除や端末変更で記録が失われます。書き出しには現在の人生が含まれ、通算記録は含まれません。</p><details><summary>操作のヒント</summary><p>再生で日々が進み、大切な決断で止まります。「次の決断まで」は結果を変えずに待ち時間を省略します。詳細画面を開いている間や、アプリを離れている間は進みません。<br>生活方針は変更まで継続。選択中の方針以外の生活も続きます。6歳から学びや交流などを自分で始められます。</p></details>${screen === 'game' ? '<button class="big-button secondary" data-action="title">保存してタイトルへ</button>' : ''}` };
 }
 function drawChart() {
   const el = document.querySelector('#chart'); if (!el || !run) return;
@@ -75,7 +80,7 @@ function drawChart() {
 function render() {
   const oldScroll = document.querySelector('.scene-scroll')?.scrollLeft;
   root.innerHTML = (screen === 'title' ? titleMarkup() : homeMarkup()) + '<div id="sheet-root"></div>';
-  const w = run ? worldOf(run) : WORLDS[2]; drawScene(document.querySelector('#scene'), screen === 'game' ? run : null, w);
+  const w = run ? worldOf(run) : WORLDS[2]; drawScene(document.querySelector('#scene'), screen === 'game' ? run : null, w, appearance);
   const scroller = document.querySelector('.scene-scroll'); if (scroller) scroller.scrollLeft = oldScroll ?? 190;
   if (panel) {
     const p = panelBody();
@@ -94,6 +99,15 @@ function afterStep() {
 document.addEventListener('click', event => {
   const button = event.target.closest('[data-action]'); if (!button || button.disabled) return;
   const a = button.dataset.action, id = button.dataset.id;
+  if (a === 'appearance') {
+    if (!['hair', 'outfit'].includes(button.dataset.kind)) return;
+    appearance = normalizeAppearance({ ...appearance, [button.dataset.kind]: id });
+    try { localStorage.setItem(APPEARANCE_KEY, JSON.stringify(appearance)); } catch { toast('見た目を保存できません。今回の表示には反映しました。'); }
+    const y = document.querySelector('.sheet')?.scrollTop || 0;
+    render();
+    if (document.querySelector('.sheet')) document.querySelector('.sheet').scrollTop = y;
+    document.querySelector(`[data-action="appearance"][data-id="${id}"]`)?.focus({ preventScroll: true });
+  }
   if (a === 'new') { if (run || storageError) openPanel('confirm-new'); else birth(); }
   if (a === 'birth') birth();
   if (a === 'continue') { screen = 'game'; playing = false; panel = run.dead ? 'ending' : run.pending ? 'decision' : null; render(); }
@@ -157,3 +171,8 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 render(); requestAnimationFrame(frame);
+if (typeof Image !== 'undefined') preloadCharacters().then(ok => {
+  // Redraw only the current canvas: do not reset focus, scrolling or the open panel.
+  drawScene(document.querySelector('#scene'), screen === 'game' ? run : null, run ? worldOf(run) : WORLDS[2], appearance);
+  if (!ok) toast('一部の素材を読み込めませんでした。ゲーム内は仮表示を続けます。');
+});

@@ -1,5 +1,6 @@
-// Original, replaceable pixel scenery drawn from code. No external asset requests.
-export function drawScene(canvas, run, world) {
+import { canUseOfficeArtwork, drawCharacter } from './characters.js';
+// Original, replaceable scenery with layered user-created adult artwork.
+export function drawScene(canvas, run, world, appearance) {
   if (!canvas) return;
   const c = canvas.getContext('2d');
   canvas.width = 720; canvas.height = 190;
@@ -61,7 +62,7 @@ export function drawScene(canvas, run, world) {
   };
   const age = run ? run.tick / 4 : 30;
   if (age < 3) { rect(344, 133, 18, 8, '#d9cfad'); rect(347, 129, 8, 7, '#d8b48b'); }
-  else person(301, age < 13 ? 115 : 102, '#638e91', age < 13);
+  else if (!canUseOfficeArtwork(run) || !drawCharacter(c, appearance, 283, 84, 2)) person(301, age < 13 ? 115 : 102, '#638e91', age < 13);
   if (!run || run.people.some(p => p.id === 'partner' && p.alive)) person(410, 93, '#b18c70');
   else if (age < 25 && run.people[0]?.alive) person(411, 93, '#b18c70');
   if (run?.hobby) { rect(274, 132, 14, 8, '#c5ad77'); rect(277, 127, 8, 7, '#a4845f'); }
