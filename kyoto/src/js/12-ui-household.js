@@ -9,6 +9,7 @@ function stRender(){
   stBadge();
   const el=$('home-body');if(!el||$('scr-home').hidden)return;
   const h=S.hh,w=S.wk,E=stEsc,f=stFmt;
+  const income=stV(ST_INC+(S.mo>=h.bonusFrom?h.bonus:0)),expense=stV(ST_LIV),net=income-expense;
   const open=S.ths.filter(t=>ST_OPEN.includes(t.st)||t.queued),closed=S.ths.filter(t=>!ST_OPEN.includes(t.st)&&!t.queued).slice(-8).reverse();
   const when=t=>{const r=[];if(t.sk==='work'&&t.st==='作業中')r.push(`作業${t.prog}/${t.len}か月`);if(t.queued)r.push('順番待ち');else if(t.st==='条件不足'&&t.why)r.push(t.why);else if(t.st==='候補探し'&&t.why)r.push(t.why);if(t.due!=null&&ST_OPEN.includes(t.st))r.push(`${Math.max(0,t.due-S.mo)}か月以内`);return r.join('・')};
   const who=t=>{const n=npcById(t.tid);return n?`（${E(n.name)}）`:''};
@@ -18,8 +19,15 @@ function stRender(){
   const works=w.works.map(k=>`<li>作品「${E(k.nm)}」：${E(k.st)}</li>`).join('');
   el.innerHTML=
    `<div class="card msec"><h2>家計<span class="note">成人相当1人分の抽象的な数値</span></h2>
-     <div class="kv"><span>資金</span><b>${f(h.fund)}</b><span>食料</span><b>${f(h.food)}</b><span>物資</span><b>${f(h.goods)}</b></div>
-     <p class="note">使える量：資金 ${f(stAvail('fund'))}・食料 ${f(stAvail('food'))}・物資 ${f(stAvail('goods'))}（予約を除く）。毎月の収入 ${ST_INC+(S.mo>=h.bonusFrom?h.bonus:0)}・生活費 ${ST_LIV}。</p>
+     <div class="cashflow" role="group" aria-label="毎月の収支の見込み">
+       <div class="cashflow-caption">毎月の収支</div>
+       <div class="cashflow-row"><span>収入</span><b class="cashflow-income">${f(income)}</b></div>
+       <div class="cashflow-row"><span>支出</span><b class="cashflow-expense">−${f(expense)}</b></div>
+       <div class="cashflow-row cashflow-total"><span>収支</span><b class="${net<0?'cashflow-expense':net>0?'cashflow-income':'cashflow-even'}">${net<0?'−':''}${f(Math.abs(net))}</b></div>
+       <p class="note">定期収入と生活費の見込みです。単発の出費・貸借は含みません。</p>
+     </div>
+     <div class="kv"><span>所持金</span><b>${f(h.fund)}</b><span>食料</span><b>${f(h.food)}</b><span>物資</span><b>${f(h.goods)}</b></div>
+     <p class="note">使える量：資金 ${f(stAvail('fund'))}・食料 ${f(stAvail('food'))}・物資 ${f(stAvail('goods'))}（予約を除く）。</p>
      <p class="note">家庭の備え ${f(h.home)}・共同の備え ${f(h.cstock)}・出資 ${f(h.invest)}・未払 ${f(h.unpaid)}</p>
      ${loans?`<ul class="log">${loans}</ul>`:''}</div>
     <div class="card msec"><h2>住まい・移動</h2>
