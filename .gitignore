@@ -1,6 +1,3 @@
-# 権利・再配布条件が未確認の背景素材と、それを埋め込んだ完成HTML・画面写真は、確認が取れるまでコミットしない。
-# 確認後に下の3行を削除して git add する（手順は kyoto/assets/README.md）。
-kyoto/assets/backgrounds/*.png
-kyoto/dist/
+# テスト実行時に生成される画面写真（確認用。コミットしない）
 kyoto/verify/shots/
 kyoto/verify/archive/shots/

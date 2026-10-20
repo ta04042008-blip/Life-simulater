@@ -2,15 +2,15 @@
 
 「2000年の地球上の誰か1人。」日本版プロトタイプの **最新版** です。リポジトリ直下の `index.html`・`src/`・`test/`（旧試作。`main` に保存されたもの）とは別物で、互いに影響しません。旧試作は一切変更していません。
 
-2026-10-20 に、Claude上で開発していた単一HTML（約3.8MB・素材埋め込み）を、**動作を1バイトも変えずに**機能別ファイルへ分けて登録しました。素材をすべて揃えて組み立てた結果が、当時の最新版と完全一致することを確認済みです（SHA-256 `1f1a823d7f48a0c54510750e644582eb65758260c189231e6d5cd49b5087cc95`。この値でZIP版や後の再現を照合できます）。
+2026-10-20 に、Claude上で開発していた単一HTML（約3.8MB・素材埋め込み）を、**動作を1バイトも変えずに**機能別ファイルへ分けて登録しました。登録時（コミット `24145a0`）の組み立て結果は、分割前の最新版と完全一致しました（SHA-256 `1f1a823d7f48a0c54510750e644582eb65758260c189231e6d5cd49b5087cc95`）。その後の修正（出生年を西暦1〜1900年へ、`0d465d8`）により、現在の `dist` は別の値です。
 
-> **注意（背景素材）**：背景PNG 68点は、出所・再配布条件が未確認のため、権利確認が取れるまでこのリポジトリ（公開）には置いていません。そのためGitHubから取得しただけでは `build` は素材不足で止まります。完全版はZIPで別途受け渡し、戻し方は `assets/README.md` を見てください。
+> **背景素材**：背景PNG 68点（ユーザー作成。AI生成を含む）は 2026-10-20 に正式登録しました。ファイルの一覧と照合は `assets/backgrounds-MANIFEST.txt`、出所は `assets/README.md`。
 
 ## 使い方（依存パッケージなし・Node.js 22以降）
 
 ```sh
-node kyoto/tools/build.mjs        # → kyoto/dist/kyoto.html を作る（素材を埋め込んだ1枚のHTML。背景素材が必要）
-node kyoto/tools/check.mjs        # 構文・組み立て・（あれば）dist の一致を検査。背景が無くても構文検査はできる
+node kyoto/tools/build.mjs        # → kyoto/dist/kyoto.html を作る（素材を埋め込んだ1枚のHTML）
+node kyoto/tools/check.mjs        # 構文・組み立て・dist の一致を検査（dist が無い環境では構文検査のみ）
 ```
 
 `kyoto/dist/kyoto.html` をブラウザで開くとそのまま遊べます（HTTP不要。スマホ縦画面向け、×1〜×30の自動再生）。セーブはメニューの手動操作のみで、`localStorage`（キー `kyoto-kurashi-mihon-v4`）に保存します。
@@ -47,8 +47,8 @@ kyoto/
 │     ├─ 17-control.js           再生・画面切替・制御
 │     ├─ 18-birth-ceremony.js    誕生の演出
 │     └─ 19-title-screen.js      タイトル画面・セーブ／ロード
-├─ assets/                 人物の絵(64×64)45点・フォント2点を登録。背景(288×96)68点は照合表のみ（詳細は assets/README.md）
-├─ dist/kyoto.html         組み立て済みの完成品（git管理外。ZIP版には含む。ソースから作り直せる）
+├─ assets/                 人物の絵(64×64)45点・背景(288×96)68点・フォント2点（詳細は assets/README.md）
+├─ dist/kyoto.html         組み立て済みの完成品（ソースから作り直せる。ソースを変えたら作り直してコミット）
 ├─ tools/                  build.mjs / check.mjs / mkfont.py
 └─ verify/                 画面テスト（t_*.mjs）・旧セーブの見本(fixtures/)・使わなくなった旧テスト(archive/)
 ```
