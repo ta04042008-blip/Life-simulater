@@ -1,0 +1,32 @@
+name: Kyoto source checks
+
+on:
+  push:
+    branches:
+      - develop
+      - 'fix/**'
+  pull_request:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Legacy prototype and asset-free Kyoto regression tests
+        run: npm test
+      - name: Legacy JavaScript syntax check
+        run: npm run check
+      - name: Kyoto JavaScript syntax and source order check
+        run: npm run kyoto:check
+      # Browser tests and a full build require 68 background PNGs absent
+      # from this public repository. They must be verified separately.
