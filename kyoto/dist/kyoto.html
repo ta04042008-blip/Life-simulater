@@ -336,6 +336,7 @@ h2{font-size:16.67px;font-weight:400;color:var(--muted);margin:0;letter-spacing:
         <button class="pbtn" id="save">手動セーブ</button>
         <button class="pbtn" id="load">手動ロード</button>
         <button class="pbtn" id="load-auto">自動保存から再開</button>
+        <button class="pbtn" id="load-prev-auto" hidden>ひとつ前の自動保存</button>
         <button class="pbtn" id="export-save">JSONを書き出す</button>
         <button class="pbtn" id="import-save">JSONを読み込む</button>
         <button class="pbtn" id="restore-protected" hidden>変更前の人生に戻す</button>
@@ -2848,7 +2849,7 @@ function birthCeremony(rand){
       <button class="big" id="bgo">この名前で人生を始める</button></div>`);
     bthBeep(300,.12,.05,'triangle');
     const inp=$('bnm');
-    const apply=()=>{const v=inp.value.trim();if(v&&v.length<=12)S.myName=v};
+    const apply=()=>{const v=inp.value.trim();if(v&&v.length<=12){S.myName=v;saveAutoSoon()}};
     inp.oninput=apply;
     $('bgo').onclick=()=>{apply();bthEnd();render();window.scrollTo(0,0)};
   }
@@ -2897,6 +2898,7 @@ function saveProtectPrevious(){
   try{
     const previous=saveArmed&&S?saveSnapshot():localStorage.getItem(SAVE_AUTO_KEY);
     if(previous)localStorage.setItem(SAVE_PROTECT_KEY,previous);
+    saveButtons();
     return true;
   }catch(e){toast('保存領域が不足しているため、現在の人生を保護できません。JSONを書き出してください。');return false}
 }
@@ -2908,6 +2910,7 @@ function saveAutoNow(){
     if(data===old)return true;
     if(old)localStorage.setItem(SAVE_PREV_KEY,old);
     localStorage.setItem(SAVE_AUTO_KEY,data);
+    saveButtons();
     saveWarned=false;
     return true;
   }catch(e){
@@ -2969,9 +2972,12 @@ async function saveImportFile(file){
   return saveRestore(parsed,'JSONファイル');
 }
 function saveButtons(){
-  const el=$('restore-protected');
-  if(!el)return;
-  try{el.hidden=!localStorage.getItem(SAVE_PROTECT_KEY)}catch(e){el.hidden=true}
+  const protectedButton=$('restore-protected'),previousButton=$('load-prev-auto');
+  if(!protectedButton||!previousButton)return;
+  try{
+    protectedButton.hidden=!localStorage.getItem(SAVE_PROTECT_KEY);
+    previousButton.hidden=!localStorage.getItem(SAVE_PREV_KEY);
+  }catch(e){protectedButton.hidden=true;previousButton.hidden=true}
 }
 window.addEventListener('pagehide',()=>saveAutoNow());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveAutoNow()});
@@ -3048,6 +3054,7 @@ $('totitle').onclick=()=>{stop();titleScreen()};
 $('save').onclick=saveManual;
 $('load').onclick=()=>saveLoadKey(KEY,'手動セーブ');
 $('load-auto').onclick=()=>saveLoadKey(SAVE_AUTO_KEY,'自動保存');
+$('load-prev-auto').onclick=()=>saveLoadKey(SAVE_PREV_KEY,'ひとつ前の自動保存');
 $('export-save').onclick=saveExport;
 $('import-save').onclick=()=>{$('import-file').click()};
 $('import-file').onchange=async e=>{const file=e.target.files&&e.target.files[0];await saveImportFile(file);e.target.value='';saveButtons()};
