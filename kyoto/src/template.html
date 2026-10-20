@@ -71,7 +71,7 @@
       <div class="chips" id="personas" role="group" aria-label="境遇"></div>
       <p class="note">選ぶと0歳から生まれ直します。人物・出来事・数値はすべて仮のデータです。</p>
       <button class="pbtn" id="newrand" hidden>ランダムで生まれ直す</button>
-      <p class="note">ランダム：0〜1900年のどこかに生まれ、その時代の境遇になります。</p>
+      <p class="note">ランダム：西暦1〜1900年のどこかに生まれ、その時代の境遇になります。</p>
     </div>
     <div class="card msec">
       <h2>時間を進める</h2>
@@ -85,10 +85,16 @@
     <div class="card msec">
       <h2>記録・セーブ</h2>
       <div class="mgrid" style="grid-template-columns:1fr 1fr">
-        <button class="pbtn" id="save">セーブ</button>
-        <button class="pbtn" id="load">ロード</button>
+        <button class="pbtn" id="save">手動セーブ</button>
+        <button class="pbtn" id="load">手動ロード</button>
+        <button class="pbtn" id="load-auto">自動保存から再開</button>
+        <button class="pbtn" id="export-save">JSONを書き出す</button>
+        <button class="pbtn" id="import-save">JSONを読み込む</button>
+        <button class="pbtn" id="restore-protected" hidden>変更前の人生に戻す</button>
         <button class="pbtn" id="totitle">タイトルへ</button>
       </div>
+      <input id="import-file" type="file" accept=".json,application/json" hidden>
+      <p class="note">自動保存は手動セーブとは別に、進行・選択後や画面を閉じる際に更新されます。読み込み前の人生は復元用に退避します。端末を替える前にはJSONも保存してください。</p>
       <p class="toast" id="toast" role="status"></p>
     </div>
     <div class="card msec">
