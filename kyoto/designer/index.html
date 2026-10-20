@@ -103,6 +103,14 @@ textarea{width:100%;min-height:76px;resize:vertical;line-height:1.7}
 .legend{display:flex;gap:12px;font-size:12px;color:var(--muted);align-items:center}
 .legend i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fbar{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;margin:0 0 12px;position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--hh,0px) + 4px);z-index:9}
+.fbar input[type=search]{flex:1 1 180px;min-width:0;font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;min-height:36px}
+.fbar select{max-width:100%;min-width:0}
+.fbar label.chk{display:inline-flex;gap:5px;align-items:center;font-size:13px;min-height:36px}
+.fbar .cnt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;margin-left:auto}
+.fbar button.link{min-height:36px}
+[hidden]{display:none!important}
+@media (max-width:560px){.fbar{position:static}}
 .later{margin-top:28px;padding-top:14px;border-top:1px dashed var(--line)}
 .toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:99px;font-size:13px;z-index:30;max-width:calc(100% - 32px)}
 @media (prefers-reduced-motion: reduce){.prog i{transition:none}}
@@ -149,6 +157,57 @@ let GAME=null,DEF=null,META=null,cur=null,dbRef=null,dbOk=false,saved=null,errs=
    path：値の場所（vars の名前から）。shape：n＝数1つ／a＝数の並び／p＝最小・最大の組／pp＝組の並び／o＝名前つきの数
    scale：画面の表示＝内部の値×scale。min/max は画面の表示の単位 */
 const KIND={a:'自動の出来事',s:'小さな選択',b:'大きな選択'};
+/* ---------- 検索・絞り込み（数値タブ・変更一覧タブ） ---------- */
+const FLT={num:{q:'',g:'',chg:false,bad:false},diff:{q:'',k:''}};
+const norm=s=>String(s).normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
+const hit=(hay,q)=>{const t=norm(q).split(/\s+/).filter(Boolean);if(!t.length)return true;const h=norm(hay);return t.every(w=>h.includes(w))};
+function fbarHTML(kind,opts){
+  const s=FLT[kind];
+  return `<div class="fbar" role="search" data-fk="${kind}">
+    <input type="search" id="fq" value="${esc(s.q)}" placeholder="${kind==='num'?'項目名・説明で探す（例：死亡、★、家計）':'変えた項目・値で探す'}" aria-label="検索" autocomplete="off" enterkeyhint="search">
+    <select id="fsel" aria-label="${kind==='num'?'グループで絞り込む':'種類で絞り込む'}">${opts.map(([v,l])=>`<option value="${esc(v)}"${v===(kind==='num'?s.g:s.k)?' selected':''}>${esc(l)}</option>`).join('')}</select>
+    ${kind==='num'?`<label class="chk"><input type="checkbox" id="fchg"${s.chg?' checked':''}>変えた項目だけ</label><label class="chk"><input type="checkbox" id="fbad"${s.bad?' checked':''}>誤りだけ</label>`:''}
+    <button class="link" id="fclr" type="button">条件をクリア</button>
+    <span class="cnt" id="fcnt" aria-live="polite"></span>
+  </div>`;
+}
+function fActive(kind){const s=FLT[kind];return kind==='num'?!!(s.q.trim()||s.g||s.chg||s.bad):!!(s.q.trim()||s.k)}
+function applyNumFilter(){
+  const s=FLT.num;let vis=0,tot=0;
+  document.querySelectorAll('#main section.grp[data-g]').forEach(sec=>{
+    const gt=sec.querySelector('h2').textContent;let v=0;
+    sec.querySelectorAll('.fld').forEach(f=>{
+      tot++;
+      const hay=gt+' '+[...f.querySelectorAll('.fl-head,.help,.in span')].map(x=>x.textContent).join(' ');
+      const ok=(!s.g||s.g===sec.dataset.g)&&hit(hay,s.q)&&(!s.chg||f.classList.contains('changed'))&&(!s.bad||f.classList.contains('bad'));
+      f.hidden=!ok;if(ok)v++;
+    });
+    sec.hidden=v===0;vis+=v;
+  });
+  const c=$('#fcnt');if(c)c.textContent=fActive('num')?`${vis}件 / 全${tot}件`:`全${tot}件`;
+  const e=$('#fempty');if(e)e.hidden=vis>0;
+}
+function applyDiffFilter(){
+  const s=FLT.diff;let vis=0,tot=0;
+  document.querySelectorAll('#main .diff').forEach(d=>{
+    tot++;const ok=(!s.k||d.dataset.k===s.k)&&hit(d.dataset.q,s.q);d.hidden=!ok;if(ok)vis++;
+  });
+  const c=$('#fcnt');if(c)c.textContent=fActive('diff')?`${vis}件 / 全${tot}件`:`全${tot}件`;
+  const e=$('#fempty');if(e)e.hidden=vis>0;
+  const u=$('#undo-note');if(u)u.hidden=!fActive('diff');
+}
+function onFilterInput(e){
+  const bar=e.target.closest('.fbar');const kind=bar.dataset.fk,s=FLT[kind],id=e.target.id;
+  if(id==='fq')s.q=e.target.value;
+  else if(id==='fsel'){if(kind==='num')s.g=e.target.value;else s.k=e.target.value}
+  else if(id==='fchg')s.chg=e.target.checked;
+  else if(id==='fbad')s.bad=e.target.checked;
+  (kind==='num'?applyNumFilter:applyDiffFilter)();
+}
+function clearFilter(kind){
+  Object.assign(FLT[kind],kind==='num'?{q:'',g:'',chg:false,bad:false}:{q:'',k:''});
+  (kind==='num'?renderNum:renderDiff)();
+}
 function numSchema(){
   const st=META.stats, pol=META.policies;
   return [
@@ -351,7 +410,9 @@ function renderNum(){
   FIELD_BY_ID={};
   const sch=numSchema();
   $('#main').innerHTML=`<p class="intro">ゲーム全体に効く数値です。左端に朱色の線がある項目は、既定から変えたものです。変えたら「試遊」で確かめられます。</p>`+
-    sch.map(g=>`<section class="grp" id="g-${g.id}"><h2>${esc(g.title)}</h2><p>${esc(g.intro)}</p>${g.fields.map((f,i)=>{const fid=`f-${g.id}-${i}`;FIELD_BY_ID[fid]=f;return fieldHTML(f,fid)}).join('')}</section>`).join('')+laterHTML();
+    fbarHTML('num',[['','すべてのグループ'],...sch.map(g=>[g.id,g.title])])+
+    sch.map(g=>`<section class="grp" id="g-${g.id}" data-g="${g.id}"><h2>${esc(g.title)}</h2><p>${esc(g.intro)}</p>${g.fields.map((f,i)=>{const fid=`f-${g.id}-${i}`;FIELD_BY_ID[fid]=f;return fieldHTML(f,fid)}).join('')}</section>`).join('')+`<p class="note" id="fempty" hidden>当てはまる項目がありません。条件を変えるか、「条件をクリア」を押してください。</p>`+laterHTML();
+  applyNumFilter();
 }
 function onNumInput(e){
   const el=e.target;const fid=el.dataset.fid;const f=FIELD_BY_ID[fid];if(!f)return;
@@ -474,14 +535,17 @@ function renderDiff(){
   const L=diffList(),E=allErrors();
   $('#main').innerHTML=`${E.length?`<div class="banner bad"><b>直してほしい所（${E.length}件）</b><br>${E.map(esc).join('<br>')}</div>`:''}
     <section class="grp"><h2>変えた所（${L.length}件）</h2>
-    ${L.length?`<div>${L.map((d,i)=>`<div class="diff"><div class="what">${esc(d.label)}<small>${esc(d.grp)}</small><div class="vals"><s>${esc(d.a)}</s> → <b>${esc(d.b)}</b></div></div><button class="link" data-undo="${i}">既定に戻す</button></div>`).join('')}</div>
-      <div class="row" style="margin-top:12px"><button id="undo-all">${confirmAll?'本当に すべて既定に戻す':'すべて既定に戻す'}</button>${confirmAll?'<button id="undo-cancel">やめる</button>':''}</div>`:'<p class="note">まだ何も変えていません。既定（今のゲームの値）のままです。</p>'}
+    ${L.length?fbarHTML('diff',[['','すべての種類'],['num','数値'],['name','名前'],['per','境遇']]):''}
+    ${L.length?`<div>${L.map((d,i)=>`<div class="diff" data-k="${d.grp==='名前'?'name':d.grp.startsWith('境遇：')?'per':'num'}" data-q="${esc([d.grp,d.label,d.a,d.b].join(' '))}"><div class="what">${esc(d.label)}<small>${esc(d.grp)}</small><div class="vals"><s>${esc(d.a)}</s> → <b>${esc(d.b)}</b></div></div><button class="link" data-undo="${i}">既定に戻す</button></div>`).join('')}</div>
+      <p class="note" id="fempty" hidden>当てはまる変更がありません。</p>
+      <div class="row" style="margin-top:12px"><button id="undo-all">${confirmAll?'本当に すべて既定に戻す':'すべて既定に戻す'}</button>${confirmAll?'<button id="undo-cancel">やめる</button>':''}<span class="note" id="undo-note" hidden>絞り込み中でも、変えた所はすべて戻ります。</span></div>`:'<p class="note">まだ何も変えていません。既定（今のゲームの値）のままです。</p>'}
     </section>
     <section class="grp"><h2>ゲームへの反映</h2>
       <div class="card"><p style="margin:0 0 8px">保存した設計は、まだ公開中のゲームには入っていません。チャットで次のように頼むと、Claude が内容を確かめてゲーム本体（GitHub の develop と公開中のゲーム）に組み込みます。</p>
       <div class="row"><code id="ask" style="font-size:14px;background:var(--soft);padding:6px 10px;border-radius:6px">設計室の内容をゲームに反映して</code><button id="copy-ask">写す</button></div>
       <p class="note" style="margin:8px 0 0">${dbOk?'保存してから頼んでください（未保存の変更は Claude から見えません）。':'この画面では保存先に接続できないため、Claude から設計が見えません。claude.ai でこの設計室を開いて保存してください。'}${lastApplied?`<br>前回の反映：${esc(lastApplied)}`:''}</p></div>
     </section>`+laterHTML();
+  if(L.length)applyDiffFilter();
 }
 
 /* ---------- 試遊 ---------- */
@@ -571,10 +635,11 @@ function show(t){
   try{localStorage.setItem('kyoto-designer-tab',t)}catch(x){}
 }
 document.querySelector('nav.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b&&cur){if(b.dataset.tab!=='per')perSel=null;show(b.dataset.tab)}});
-$('#main').addEventListener('input',e=>{if(!cur)return;if(tab==='num')onNumInput(e);else if(tab==='per')onPerInput(e);else if(tab==='name')onNameInput(e)});
-$('#main').addEventListener('change',e=>{if(!cur)return;if(tab==='per'&&e.target.tagName==='SELECT')onPerInput(e)});
+$('#main').addEventListener('input',e=>{if(!cur)return;if(e.target.closest('.fbar')){onFilterInput(e);return}if(tab==='num')onNumInput(e);else if(tab==='per')onPerInput(e);else if(tab==='name')onNameInput(e)});
+$('#main').addEventListener('change',e=>{if(!cur||e.target.closest('.fbar'))return;if(tab==='per'&&e.target.tagName==='SELECT')onPerInput(e)});
 $('#main').addEventListener('click',e=>{
   const t=e.target;if(!cur)return;
+  if(t.id==='fclr'){clearFilter(t.closest('.fbar').dataset.fk);return}
   if(t.dataset.rst){const f=FIELD_BY_ID[t.dataset.rst];setP(cur.vars,f.path,clone(getP(DEF.vars,f.path)));Object.keys(errs).forEach(k=>{if(k.startsWith(t.dataset.rst+'-'))delete errs[k]});const box=document.getElementById(t.dataset.rst);box.outerHTML=fieldHTML(f,t.dataset.rst);refreshStatus();return}
   const pr=t.closest('[data-per]');if(pr){perSel=pr.dataset.per;renderPer();return}
   if(t.id==='per-back'){perSel=null;renderPer();return}
@@ -618,5 +683,7 @@ async function boot(){
   show(t);refreshStatus();
   if(!dbOk)$('#main').insertAdjacentHTML('afterbegin','<div class="banner">保存先（データベース）に接続できないため、変更はこの端末の下書きにだけ残ります。claude.ai でこの設計室を開くと保存できます。</div>');
 }
-boot();
+function setHH(){const h=document.querySelector('header.top');if(h)document.documentElement.style.setProperty('--hh',h.offsetHeight+'px')}
+addEventListener('resize',setHH);
+boot().then(setHH);
 </script>
