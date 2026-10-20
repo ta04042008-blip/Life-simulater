@@ -1,7 +1,4 @@
-import {BUILD,FIXDIR} from './lib.mjs';
-import { createRequire } from 'module';
-const require = createRequire('/opt/npm-tools/node_modules/');
-const { chromium } = require('playwright');
+import { BUILD, FIXDIR, chromium } from './lib.mjs';
 const browser = await chromium.launch();
 const page = await browser.newPage({viewport:{width:390,height:844}});
 const errs=[];
