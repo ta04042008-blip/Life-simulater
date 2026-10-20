@@ -42,3 +42,24 @@ jobs:
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
       # Browser/Playwright visual tests are separate from these Node-based checks.
+
+  browser-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test-only browser harness
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Build Kyoto standalone HTML
+        run: npm run kyoto:build
+      - name: Run Kyoto browser regression suite
+        env:
+          PLAYWRIGHT_DIR: ${{ github.workspace }}/kyoto/verify/lib.mjs
+        run: npm run kyoto:verify
