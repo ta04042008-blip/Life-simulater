@@ -1,4 +1,4 @@
-# 背景素材の一覧（権利確認までGitHubには置かない。ファイルは kyoto/assets/backgrounds/ に置く）
+# 背景素材の一覧（ユーザー作成・AI生成を含む。GitHub develop に登録済み）
 # 形式: sha256  ファイル名  寸法 — ファイルを戻したら sha256sum -c 相当で照合できる
 158acb9f2963c5a83531baaa4fb1e81b6b9d7350569fee6e7e6e7d9a50df6836  aristocrat_autumn.png  288x96
 3f4c163b91159208846b1e1c8e9116b1c64e4996a5d78912bc0a1f1ebffce54d  aristocrat_spring.png  288x96
