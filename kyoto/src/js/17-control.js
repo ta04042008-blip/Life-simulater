@@ -41,8 +41,8 @@ function step(n,untilDecision){
   if(untilDecision&&!S.decision&&!S.dead){let g=0;while(!S.decision&&!S.dead&&g++<400)go1()}
   render();showFx();
 }
-function randomBirth(){                                    // 生まれ年を0〜1900年からランダムに引き、その年の時代の境遇を重みで選ぶ
-  const y=rnd(1901),c=Object.keys(RANDW).filter(k=>y>=PERSONAS[k].yr[0]&&y<PERSONAS[k].yr[1]);
+function randomBirth(){                                    // 生まれ年を西暦1〜1900年からランダムに引き、その年の時代の境遇を重みで選ぶ
+  const y=1+rnd(1900),c=Object.keys(RANDW).filter(k=>y>=PERSONAS[k].yr[0]&&y<PERSONAS[k].yr[1]);
   const tot=c.reduce((a,k)=>a+RANDW[k],0);let r=Math.random()*tot;
   for(const k of c){r-=RANDW[k];if(r<0)return{pid:k,year:y}}
   return{pid:c[0]||'common',year:y};
