@@ -193,6 +193,7 @@ function migrate(s){
     });
   });
   if(typeof s.nextSmallT!=='number')s.nextSmallT=s.t+seeded(hash(`${s.pid}|${s.switchAge}|small|${Math.floor(s.t)}`),()=>SMALL_GAP(s.mode==='q'));
+  s.mode='q'; // 旧年単位セーブも現在時点から四半期で再開。過去の再計算はしない。
   s.ver=5;
   stNew(s);
   return s;
