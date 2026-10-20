@@ -274,8 +274,8 @@ h2{font-size:16.67px;font-weight:400;color:var(--muted);margin:0;letter-spacing:
       <div class="sceneinfo" style="margin-top:2px"><span id="pplace">—</span><span id="pera">—</span></div>
       <div class="stats" id="stats"></div>
       <div class="policy">
-        <label>生活方針</label>
-        <div class="chips" id="policy" role="group" aria-label="生活方針"></div>
+        <label>重視</label>
+        <div class="chips" id="policy" role="group" aria-label="重視"></div>
       </div>
     </div>
     <div>
@@ -305,7 +305,7 @@ h2{font-size:16.67px;font-weight:400;color:var(--muted);margin:0;letter-spacing:
   </section>
 
   <section class="screen" id="scr-act" aria-label="行動" hidden>
-    <div class="card msec"><h2>行動</h2><p class="note">準備中です。</p></div>
+    <div class="card msec"><h2>行動</h2><div id="life-actions"></div></div>
   </section>
 
   <section class="screen" id="scr-menu" aria-label="メニュー" hidden>
@@ -328,7 +328,7 @@ h2{font-size:16.67px;font-weight:400;color:var(--muted);margin:0;letter-spacing:
         <button class="pbtn" id="adv12">12か月</button>
         <button class="pbtn" id="advd">次の判断まで</button>
       </div>
-      <p class="note">自動再生は、×1で1回（四半期でも1年でも）あたり約30秒、×2は15秒、×4は約7秒、×30は1秒（確認用）です。メニューを開いている間は止まります。</p>
+      <p class="note">自動再生は、×1で1回（3か月）あたり約30秒、×2は15秒、×4は約7秒、×30は1秒（確認用）です。画面を切り替えても進みます。再生ボタンで停止できます。選択と結果の確認中は止まります。</p>
     </div>
     <div class="card msec">
       <h2>記録・セーブ</h2>
@@ -359,7 +359,7 @@ h2{font-size:16.67px;font-weight:400;color:var(--muted);margin:0;letter-spacing:
     <div class="card warnbox msec" id="stdev"></div>
     <div class="card warnbox msec">
       <h2>仮データについて</h2>
-      <p class="note">時代（平安1000年頃・中世1400年頃）は背景に合わせた仮置きで、史実の確認はしていません。能力値の増減、出来事、人物はすべて試作用の仮設定です。0歳から四半期（春夏秋冬）ごとに進み、20〜30歳の間（誕生時に抽選）から1年ごとに進みます。死亡は年齢別の確率を基本に、体力の低下・病気・事故で上がります（周りの人にも同じ仕組みが働き、亡くなる場合があります）。家族（養育者・兄弟姉妹）は誕生時に仮の設定で生まれ、弟や妹は後から生まれることがあります。技能の熟練度は隠しパラメータで、画面にはLv1〜Lv10だけを出します。最長110歳（仮の強制上限）、最も出やすい死亡年齢は85歳前後（調整目標）で、境遇による直接の補正はありません。史実の統計ではありません。能力は0〜1000で、★1〜5は学習・運動・仕事などの活動で伸びるときの伸びやすさです（年齢による自然な成長・回復・衰えには掛かりません）。気質は外向／内向など5つの軸で、幼いうちは「形成中」と出し、傾向がはっきりしたらタイプ（例：INFP-T）を出します。数値・確率はすべて仮です。</p>
+      <p class="note">時代（平安1000年頃・中世1400年頃）は背景に合わせた仮置きで、史実の確認はしていません。能力値の増減、出来事、人物はすべて試作用の仮設定です。0歳から四半期（春夏秋冬）ごとに進み、生涯を通して1回の進行は3か月です。重視は今後の関連する出来事を出やすくし、それだけで能力は上がりません。死亡は年齢別の確率を基本に、体力の低下・病気・事故で上がります（周りの人にも同じ仕組みが働き、亡くなる場合があります）。家族（養育者・兄弟姉妹）は誕生時に仮の設定で生まれ、弟や妹は後から生まれることがあります。技能の熟練度は隠しパラメータで、画面にはLv1〜Lv10だけを出します。最長110歳（仮の強制上限）、最も出やすい死亡年齢は85歳前後（調整目標）で、境遇による直接の補正はありません。史実の統計ではありません。能力は0〜1000で、★1〜5は学習・運動・仕事などの活動で伸びるときの伸びやすさです（年齢による自然な成長・回復・衰えには掛かりません）。気質は外向／内向など5つの軸で、幼いうちは「形成中」と出し、傾向がはっきりしたらタイプ（例：INFP-T）を出します。数値・確率はすべて仮です。</p>
     </div>
   </section>
 </div>
@@ -693,6 +693,7 @@ function migrate(s){
     });
   });
   if(typeof s.nextSmallT!=='number')s.nextSmallT=s.t+seeded(hash(`${s.pid}|${s.switchAge}|small|${Math.floor(s.t)}`),()=>SMALL_GAP(s.mode==='q'));
+  s.mode='q'; // 旧年単位セーブも現在時点から四半期で再開。過去の再計算はしない。
   s.ver=5;
   stNew(s);
   return s;
@@ -1234,11 +1235,13 @@ function stBuild(e,j,pi){
 /* 選択肢が選べるか（資源が足りない選択肢は選べない。勝手に借金にしない） */
 function stPreWhy(o){
   const st=o&&o.st;if(!st||!st.length)return '';
-  const need={fund:0,food:0,goods:0};
+  const need={fund:0,food:0,goods:0};let time=0;
   st.forEach(c=>{
     if(c.t==='rs'&&c.hard&&c.sg<0)need[c.a]+=c.n;
     else if(c.t==='ln')need.fund+=c.n;
+    else if(c.t==='tm')time+=c.n;
   });
+  if(time>frLeft())return '自由時間が足りない';
   if(need.fund>stAvail('fund'))return '資金が足りない';
   if(need.food>stAvail('food'))return '食料が足りない';
   if(need.goods>stAvail('goods'))return '物資が足りない';
@@ -1333,7 +1336,7 @@ function stActOp(c){
 function stActsMonth(){
   const w=S.wk;
   const wl=S.hl.work;
-  if(S.age>=13&&S.policy==='仕事'&&wl!=='休止')w.worked++;                              // 仕事の実施月数（仮の根拠：生活方針が「仕事」の月）
+  if(S.age>=13&&w.form!=='未設定'&&wl!=='休止')w.worked++;                              // 就業中の実施月数。重視だけでは増やさない。
   w.acts.forEach(a=>{
     if(a.st!=='継続')return;
     if(a.k==='仕事'&&wl==='休止')return;                                   // 休止：仕事の進捗は0
@@ -1977,16 +1980,23 @@ function fireLearn(){
   S.skill=clamp(S.skill+e.sk*(yq?0.2:0.5),0,1000);
 }
 function rollSlots(){
-  const yq=S.mode==='q',ne=yq?1:2,list=[];
-  for(let i=0;i<ne;i++)if(Math.random()<0.6)list.push({k:'o',at:0.1+Math.random()*0.8});
-  if(S.age>=6&&(S.policy==='学び'||(S.policy==='仕事'&&S.age>=13))&&Math.random()<0.5)list.push({k:'l',at:0.1+Math.random()*0.8});
-  return list.sort((a,b)=>a.at-b.at);
+  if(S.quarterSlots)return S.quarterSlots;
+  const list=[],n=3+rnd(3),r=Math.random(),choices=r<.2?0:r<.55?1:r<.9?2:3;
+  for(let i=0;i<n;i++)list.push({k:'o',at:0.1+Math.random()*0.8});
+  if(S.age>=4)for(let i=0;i<choices;i++)list.push({k:'c',at:0.1+Math.random()*0.8});
+  return S.quarterSlots=list.sort((a,b)=>a.at-b.at);
 }
+function lifeBlocked(){return !!(S.decision||S.pendingResult||S.dead)}
 function runSlot(s){
+  if(!S||lifeBlocked())return;
   const i=slots.indexOf(s);if(i<0)return;slots.splice(i,1);
-  if(!S||S.dead||S.decision)return;
   popQ=[];lastBubble=null;
-  if(s.k==='o')fireOrdinary();else fireLearn();
+  if(s.k==='o')fireOrdinary();
+  else if(s.k==='c'){
+    const pool=EV.filter(e=>(e.k==='s'||(S.age>=13&&e.k==='b'))&&evElig(e));
+    const e=evChoose(pool);if(e)S.decision=evBuild(e);
+  }
+  if(lifeBlocked()&&timer){resume=true;stop()}
 }
 function fireSlot(s){runSlot(s);render();showFx();saveAutoSoon()}
 function flushSlots(){slots.slice().forEach(runSlot)}
@@ -1996,9 +2006,11 @@ function armSlots(ms){
   slots.forEach(s=>evT.push(setTimeout(()=>fireSlot(s),Math.max(50,(s.at-p0)*full))));
 }
 function tick(){
-  if(S.decision||S.dead)return false;
+  if(lifeBlocked())return false;
+  S.mode='q';
   const P=PERSONAS[S.pid],yq=S.mode==='q',yrs=yq?0.25:1;
   popQ=[];lastBubble=null;
+  const notices=[];
   // calendar
   let bday=false;
   if(yq){S.q++;S.t+=0.25;if(S.q>3){S.q=0;S.year++;S.age++;bday=true}}
@@ -2009,33 +2021,13 @@ function tick(){
     else addLog('k',`${S.age}歳になった。`,S.age%10===0);
     lastBubble=`${S.age}歳！`;
     S.npc.forEach(n=>{if(!n.known&&n.from!=null&&S.age>=n.from){n.known=true;const tx=n.fromText?`${n.name}${n.fromText}`:`${n.name}と顔を合わせるようになった。`;addLog('n',tx,true);hist(S.npc.indexOf(n),n.fromText?'生まれた':'顔を合わせるようになった')}});
-    if(yq&&S.age>=S.switchAge){S.mode='y';addLog('k','これからは、一年ごとに時が過ぎていく。',true)}
+
   }
   // growth / policy drift (all numbers are placeholders)
-  const f=yq?1.5:4,pol=POLICIES[S.policy],act=S.policy!=='休養';
-  natStep(S,S.age,yrs,yq);                  // 年齢による自然な成長と衰え（★は掛けない）
-  S.stats=S.stats.map((v,i)=>{              // 生活方針による活動の成長（プラスの分だけ★が効く。休養は回復なので掛けない）
-    let g=0;
-    if(S.age>=13){
-      g=pol[i]*f*(pol[i]>0?(1-v/1000):(0.2+v/1000));
-      if(pol[i]>0&&act){xpAdd(S,i,pol[i]*yrs*XP_POL);g*=starMult(S.star[i])}
-      g+=rnd(5)-2;
-    }else if(S.age>=6){
-      g=pol[i]*f*0.5;
-      if(g>0&&act){xpAdd(S,i,pol[i]*yrs*XP_POL*0.5);g*=starMult(S.star[i])*SAT(v)}
-    }
-    return clamp(v+g,0,1000)});
-  xpDecay(S,yrs,S.age,XP_DECAY_ME);starAll();   // 使わない力は、★の経験値がゆっくり減る（13歳から）
-  S.npc.forEach(n=>{if(n.known&&!n.dead)n.aff=clamp(n.aff+(S.policy==='交流'?1:0)+(rnd(5)-2)*(yq?1:2),0,100)});
-  tmReport();                               // 主人公の気質：表示の開始・文字の変化
-  // skill (hidden 0-1000; only the level is shown)
-  if(S.age>=6){
-    const pf=S.policy,gain=(S.age<13?(pf==='学び'?12:6):(pf==='仕事'?30:pf==='学び'?20:8))*(1-S.skill/1100);
-    const before=skillLv(S.skill);
-    S.skill=clamp(S.skill+gain*yrs-(S.age>70?(S.age-70)*0.5*yrs:0),0,1000);
-    const after=skillLv(S.skill);
-    if(after>before){addLog('k',`${P.skillName}がLv${after}になった。`,true);lastBubble=`Lv${after}！`}
-  }
+  natStep(S,S.age,yrs,true);
+  xpDecay(S,yrs,S.age,XP_DECAY_ME);starAll();
+  S.npc.forEach(n=>{if(n.known&&!n.dead)n.aff=clamp(n.aff+rnd(5)-2,0,100)});
+  tmReport();
   // people around: aging and death (same hazard idea, placeholder stamina curve)
   S.npc.forEach((n,i)=>{
     if(n.dead)return;
@@ -2046,6 +2038,7 @@ function tick(){
     if(a>=MAXAGE||Math.random()<1-Math.exp(-hz.tot*yrs)){
       n.dead=true;n.deadAge=a;
       if(n.known){
+        notices.push(`${n.name}が亡くなった。`);
         addLog('c',`${n.name}が亡くなった。`,true);hist(i,`亡くなった（${approxAge(a)}）`);lastBubble='…';
         if(n.aff>=40){applyFx([0,0,-6,0]);S.sx[2]-=15;starAll()}
         if(n.rel==='家族'){
@@ -2056,6 +2049,7 @@ function tick(){
     }
   });
   if(S.age<13&&!S.orphan&&S.npc.some(n=>n.rel==='家族'&&n.dead)&&!S.npc.some(n=>n.rel==='家族'&&!n.dead&&S.age+n.off>=0)){
+    notices.push('近所の人や親族に支えられて暮らすことになった。');
     S.orphan=true;addLog('c','身寄りが少なくなり、近所の人や親族に支えられて暮らすことになった。',true);applyFx([0,0,-9,0]);S.sx[2]-=40;starAll();
   }
   stIds();stMonths(yq?3:12);                // 状態の進行：外側は四半期・年のまま、内部だけ月順（収支・活動・件の確認・期限）
@@ -2073,6 +2067,7 @@ function tick(){
     if(Math.random()<pill){
       const sev=Math.random()<0.05+S.age/1200;
       S.ongoing={name:sev?'重い病':'風邪',mult:sev?HZ.sevMult:HZ.illMult,left:yq?1+rnd(2):1};
+      if(sev)notices.push('重い病にかかり、長く床につくことになった。');
       const d=sev?150:60;S.stats[0]=clamp(S.stats[0]-d,0,1000);popQ.push([0,-d]);emo('self','sad');if(sev){S.sx[0]-=70;starAll()}   /* 重い病は、体力の伸びやすさを下げることがある（特別な経験） */
       lastBubble=sev?'ううっ…':'ゴホゴホ…';
       addLog('c',sev?'重い病にかかり、長く床につくことになった。':'風邪をひき、しばらく療養することになった。',true);
@@ -2082,16 +2077,10 @@ function tick(){
   // death (age-based hazard, raised by low stamina, illness and accidents)
   const h=annualHazard(S.age,S.stats[0],S.ongoing);
   if(S.age>=MAXAGE||Math.random()<1-Math.exp(-h.tot*yrs)){die(h);saveAutoSoon();return true}
-  // decision
-  if(S.age>=13&&S.t>=S.nextDecT){
-    let d=Math.random()<0.85?evPick('b'):null;       // 設計案の大きな選択（なければ従来の決断）
-    if(!d){d=P.dec[S.decCount%P.dec.length];
-    for(let k=0;k<P.dec.length;k++){const c=P.dec[(S.decCount+k)%P.dec.length],pn=S.npc[c.who];if(pn&&pn.known&&!pn.dead){d=c;break}}}   /* 相手がいる決断を優先 */
-    S.decision=d;lastBubble='どうしよう…！';S.decCount++;S.nextDecT=S.t+(yq?2+rnd(3):3+rnd(4));
-    S.nextSmallT=Math.max(S.nextSmallT,S.t+1);
-  }else if(S.age>=4&&S.t>=S.nextSmallT){     // 小さな選択：選ぶまで時間が止まる
-    S.decision=(Math.random()<0.85&&evPick('s'))||makeSmall();lastBubble='どうしよう…';S.nextSmallT=S.t+SMALL_GAP(yq);
-  }
+  // 随時の選択はゲージの途中で抽選。必要な件の進行は stMonths が担当する。
+  S.quarterSlots=null;slots=[];S.quarterProgress=0;
+  if(notices.length)(S.stopQueue||(S.stopQueue=[])).push(...notices);
+  lifeShowNotice();
   saveAutoSoon();
   return true;
 }
@@ -2142,6 +2131,7 @@ function evFrame(tag,title){
   return `<div class="evback"></div><div class="evcard" id="evcard"><div class="evbanner"><span class="evtag">${esc(tag)}</span><span>${esc(title)}</span></div><div class="evscene"><canvas id="evscene" width="396" height="200"></canvas><div class="evbub" id="evbub" hidden></div></div><div class="evtext" id="evtext"></div><div id="evextra"></div></div>`;
 }
 function syncEvent(){
+  if(S&&S.pendingResult&&!$('scr-life').hidden){if(evMode!=='result'){const r=S.pendingResult;openResult(r.d,r.o,r.stats)}return}
   if(!S||!S.decision||$('scr-life').hidden){if(evMode==='decision'&&(!S||!S.decision))evHide();return}
   if(!evDecOk(S.decision)){evHide();evBanner();return}      // 不備のある回答待ちは、黙って消さずに報告して止める
   if(evMode==='decision'||evMode==='result')return;
@@ -2149,7 +2139,7 @@ function syncEvent(){
   const h=$('evwin');h.innerHTML=evFrame(d.small?'小さな選択':'イベント！',d.title);h.hidden=false;
   drawZoom();
   if(evPartner!=null&&d.say)evBub('pt',d.say);
-  evType(d.body,()=>{$('evextra').innerHTML=`<div class="evopts">${d.opts.map((o,i)=>`<button class="pbtn" data-opt="${i}"${stPreWhy(o)?' disabled':''}>${esc(o.l)}${tmFit(o)?'<small class="fit">気質に合う</small>':''}${stPreWhy(o)?`<small class="fit">${esc(stPreWhy(o))}</small>`:''}</button>`).join('')}</div>`;const b=$('evextra').querySelector('button');if(b)b.focus()});
+  evType(d.body,()=>{$('evextra').innerHTML=`<div class="evopts">${d.opts.map((o,i)=>`<button class="pbtn" data-opt="${i}"${stPreWhy(o)?' disabled':''}>${esc(o.l)}${lifeCost(o)?`<small class="fit">${esc(lifeCost(o))}</small>`:''}${tmFit(o)?'<small class="fit">気質に合う</small>':''}${stPreWhy(o)?`<small class="fit">${esc(stPreWhy(o))}</small>`:''}</button>`).join('')}</div>`;const b=$('evextra').querySelector('button');if(b)b.focus()});
 }
 function openResult(d,o,stats){
   evHide();evMode='result';evPartner=partnerOf(d);
@@ -2160,12 +2150,12 @@ function openResult(d,o,stats){
   const hasRep=evPartner!=null&&!!o.rep;
   if(o.y)evBub('me',o.y);
   evType(o.x||'…',()=>{
-    $('evextra').innerHTML=st+more(hasRep?'タップで続ける':'タップで閉じる');
+    $('evextra').innerHTML=st+more('タップで続ける');
     if(!hasRep)evFinal=true;
   });
   evRun=()=>{                       /* 相手の返事 → 閉じる */
     evBub('pt',o.rep);evFinal=true;
-    $('evextra').innerHTML=st+more('タップで閉じる');
+    $('evextra').innerHTML=st+more('タップで続ける');
   };
 }
 let evRun=null;
@@ -2176,14 +2166,17 @@ function evTap(){
   if(evFinal)evClose();else if(evRun){const f=evRun;evRun=null;f()}
 }
 function evClose(){
-  evHide();showFx();
+  if(S)S.pendingResult=null;
+  evHide();lifeShowNotice();render();showFx();saveAutoSoon();
   if(resume){resume=false;start()}
 }
 function choose(i){
-  if(!S||!S.decision)return;              // 回答は一度だけ反映する
+  if(!S||!S.decision||S.pendingResult)return;              // 回答は一度だけ反映する
   popQ=[];lastBubble=null;
   const d=S.decision;const o=d.opts[i];if(!o)return;
   if(stPreWhy(o)){evHide();syncEvent();return}      // 資源が足りない選択肢は、適用せずに選び直させる
+  const oldState={cases:S.ths.map(t=>`${t.id}|${t.st}`),info:S.inf.map(x=>x.id),form:S.wk.form,acts:S.wk.acts.map(a=>`${a.k}|${a.st}`)};
+  const before={stats:S.stats.slice(),aff:S.npc.map(n=>n.aff),fund:S.hh.fund,food:S.hh.food,goods:S.hh.goods};
   S.decision=null;
   if(d.small)addLog('n',`「${d.title}」で「${o.l}」を選んだ。${o.x}`,false);else addLog('k',`「${d.title}」で「${o.l}」を選んだ。${o.x}`);
   applyFx(o.fx,o.np,o.rec?'rec':'act',o.sc);
@@ -2194,13 +2187,52 @@ function choose(i){
   stRun(o,d,i);                                                                // 状態の変更（件・情報・資源・活動）。一つの選択の効果として一度だけ
   if(o.later){if(o.later.fu)S.pending.push({in:evIn(o.later.fu.sp.m),fu:o.later.fu});else S.pending.push({in:S.mode==='q'?Math.max(1,Math.ceil(o.later.m/3)):1,t:o.later.t,x:o.later.x,fx:o.later.fx})}
   lastBubble=o.l+'！';
-  const stats=popQ.filter(q=>Math.abs(q[1])>=3).map(q=>[q[0],q[1]]);
+  const stats=S.stats.map((v,k)=>[k,v-before.stats[k]]).filter(([,v])=>v!==0);
+  const changes=[];
+  S.npc.forEach((n,k)=>{const v=n.aff-before.aff[k];if(v)changes.push(`${n.name}との親しさ ${v>0?'+':''}${v}`)});
+  for(const [k,label] of [['fund','お金'],['food','食料'],['goods','物資']]){const v=S.hh[k]-before[k];if(v)changes.push(`${label} ${v>0?'+':''}${stFmt(v)}`)}
+  S.ths.forEach(t=>{if(!oldState.cases.includes(`${t.id}|${t.st}`))changes.push(`${t.ttl}：${t.st}`)});
+  S.inf.forEach(x=>{if(!oldState.info.includes(x.id))changes.push(x.x)});
+  if(oldState.form!==S.wk.form)changes.push(`仕事：${S.wk.form}`);
+  S.wk.acts.forEach(a=>{if(!oldState.acts.includes(`${a.k}|${a.st}`))changes.push(`${a.k}：${a.st}`)});
+  const resultOption={...o,x:[o.x,...changes].filter(Boolean).join('\n')};
+  S.pendingResult={d,o:resultOption,stats};
   saveAutoSoon();
   render();
-  if(d.small){evClose();return}            // 小さな選択は結果の画面を出さず、そのまま続ける
-  openResult(d,o,stats);
+  openResult(d,resultOption,stats);
 }
 
+// 自発的な行動も、現在の条件で成立する既存の出来事だけを使う。
+const LIFE_ACTIONS={相談:e=>/相談/.test(e.t+' '+e.b),学習:e=>e.g===4,仕事:e=>e.g===5};
+function lifeActionPool(k){
+  if(S.age<4||(k==='学習'&&S.age<6)||(k==='仕事'&&S.age<13))return [];
+  return EV.filter(e=>(e.k==='s'||(e.k==='b'&&S.age>=13))&&LIFE_ACTIONS[k](e)&&evElig(e));
+}
+function lifeActionsRender(){
+  const el=$('life-actions');if(!el)return;
+  el.innerHTML=S.age<4?'<p class="note">養育者に任せて、暮らしを見守る時期です。</p>':Object.keys(LIFE_ACTIONS).map(k=>`<button class="pbtn" data-action="${k}"${lifeBlocked()||!lifeActionPool(k).length?' disabled':''}>${k}</button>`).join('')+'<p class="note">今の年齢や人とのつながりでできる行動が選べます。選んだ後に内容と選択肢を確認します。</p>';
+}
+function lifeAction(k){
+  if(!LIFE_ACTIONS[k]||lifeBlocked())return;
+  const e=evChoose(lifeActionPool(k));if(!e)return;
+  if(timer){resume=true;stop()}
+  S.decision=evBuild(e);go('life');render();saveAutoSoon();
+}
+
+function lifeShowNotice(){
+  if(S.decision||S.pendingResult||!S.stopQueue?.length||S.dead)return;
+  const x=S.stopQueue.shift();
+  S.pendingResult={d:{title:'暮らしの変化'},o:{l:'確認',x},stats:[]};
+}
+function lifeCost(o){
+  const labels={fund:'お金',food:'食料',goods:'物資'},cost=[];
+  for(const c of o.st||[]){
+    if(c.t==='rs'&&c.hard&&c.sg<0)cost.push(`${labels[c.a]||'資源'} −${stFmt(c.n)}`);
+    else if(c.t==='ln')cost.push(`お金 −${stFmt(c.n)}`);
+    else if(c.t==='tm')cost.push(`自由時間 −${c.n}`);
+  }
+  return cost.length?cost.join('・'):'';
+}
 /* ---------- rendering ---------- */
 const cv=$('cv'),cx=cv.getContext('2d');
 const imgCache={};
@@ -2419,7 +2451,7 @@ function render(){
   $('months').style.gridTemplateColumns=`repeat(${segs},1fr)`;
   $('months').innerHTML=Array.from({length:segs},(_,i)=>`<i class="${i<=on?'on':''}"></i>`).join('');
   $('play').innerHTML=timer?'■ 停止':'<span class="tri">▲</span> 再生';
-  $('play').disabled=!!S.decision||S.dead;
+  $('play').disabled=lifeBlocked();
   $('speed').textContent=SPEEDS[speedIdx][1];
   $('adv1').textContent=yq?'1期':'1年';$('adv12').textContent=yq?'1年':'5年';
   $('pname').textContent=nameOf();$('page').textContent=`${S.age}歳・${bandOf(S.age)}`;
@@ -2436,7 +2468,7 @@ function render(){
   $('recent').innerHTML=li(S.log.slice(0,6));
   $('ledger').innerHTML=li(S.log);
   renderMap();
-  stRender();stDevRender();
+  stRender();stDevRender();lifeActionsRender();
   syncEvent();
   document.querySelectorAll('#personas .chip').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.p===S.pid);b.disabled=birthMode==='random'});
   document.querySelectorAll('#bmode .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.bm===birthMode));
@@ -2709,7 +2741,8 @@ function stop(){
   if(timer){
     clearTimeout(timer);timer=null;
     remaining=Math.max(0,tickMs-(Date.now()-tickStart));
-    setBar(1-remaining/SPEEDS[speedIdx][0],0);
+    S.quarterProgress=1-remaining/SPEEDS[speedIdx][0];
+    setBar(S.quarterProgress,0);
   }
   if(animT){clearInterval(animT);animT=null}
   seasonTimers.forEach(clearTimeout);seasonTimers=[];seasonOv=null;
@@ -2721,23 +2754,24 @@ function schedule(ms){
   timer=setTimeout(()=>{
     remaining=null;
     evT.forEach(clearTimeout);evT=[];flushSlots();
+    if(lifeBlocked()){resume=!!(S.decision||S.pendingResult);stop();render();return}
     frame++;tick();render();showFx();playSeasons();
-    if(S.decision||S.dead){resume=!!S.decision;stop();remaining=null;setBar(0,0);render();return}
+    if(lifeBlocked()){resume=!!(S.decision||S.pendingResult);stop();S.quarterProgress=0;remaining=null;setBar(0,0);render();return}
     slots=rollSlots();schedule(SPEEDS[speedIdx][0]);
   },ms);
 }
 function start(){
-  if(timer||S.decision||S.dead)return;
-  if(remaining==null)slots=rollSlots();
+  if(timer||lifeBlocked())return;
+  if(remaining==null){slots=rollSlots();if(S.quarterProgress)remaining=(1-S.quarterProgress)*SPEEDS[speedIdx][0]}
   schedule(remaining!=null?Math.max(50,remaining):SPEEDS[speedIdx][0]);
   animT=setInterval(()=>{frame++;drawScene()},600);
   render();
 }
 function step(n,untilDecision){
   stop();resume=false;remaining=null;setBar(0,0);
-  const go1=()=>{if(S.decision||S.dead)return false;slots=rollSlots();flushSlots();return tick()};
+  const go1=()=>{if(lifeBlocked())return false;slots=rollSlots();flushSlots();if(lifeBlocked())return false;return tick()};
   for(let i=0;i<n;i++){if(!go1())break;if(S.dead||(untilDecision&&S.decision))break}
-  if(untilDecision&&!S.decision&&!S.dead){let g=0;while(!S.decision&&!S.dead&&g++<400)go1()}
+  if(untilDecision&&!lifeBlocked()){let g=0;while(!lifeBlocked()&&g++<400)go1()}
   render();showFx();
 }
 function randomBirth(){                                    // 生まれ年を西暦1〜1900年からランダムに引き、その年の時代の境遇を重みで選ぶ
@@ -2862,7 +2896,10 @@ const SAVE_PROTECT_KEY='kyoto-kurashi-mihon-v4-before-replace';
 const SAVE_FORMAT='earth2000-kyoto-save', SAVE_EXPORT_VERSION=1;
 let saveArmed=false, savePending=null, saveWarned=false;
 
-function saveSnapshot(){return JSON.stringify(S)}
+function saveSnapshot(){
+  if(typeof timer!=='undefined'&&timer)S.quarterProgress=Math.max(0,Math.min(1,1-(tickMs-(Date.now()-tickStart))/SPEEDS[speedIdx][0]));
+  return JSON.stringify(S)
+}
 function saveStateOk(s){
   if(!s||typeof s!=='object'||Array.isArray(s))throw new Error('保存形式が不正です');
   if(!Object.prototype.hasOwnProperty.call(PERSONAS,s.pid))throw new Error('不明な境遇です');
@@ -2875,6 +2912,14 @@ function saveStateOk(s){
   if(!Array.isArray(s.log)||!Array.isArray(s.chron)||!Array.isArray(s.pending))throw new Error('人生記録が不正です');
   if(s.decision!=null&&(!s.decision||!Array.isArray(s.decision.opts)||!s.decision.opts.length))throw new Error('回答待ちのデータが不正です');
   if(s.npc.some(n=>!Array.isArray(n.stats)||n.stats.length!==4||!n.stats.every(v=>Number.isFinite(v)&&v>=0&&v<=1000)))throw new Error('人物の能力値が不正です');
+  if(s.stopQueue!=null&&(!Array.isArray(s.stopQueue)||!s.stopQueue.every(x=>typeof x==='string')))throw new Error('通知の予約が不正です');
+  if(s.pendingResult!=null){
+    const r=s.pendingResult;
+    if(!r.d||typeof r.d.title!=='string'||!r.o||typeof r.o.l!=='string'||typeof r.o.x!=='string'||!Array.isArray(r.stats)||!r.stats.every(x=>Array.isArray(x)&&Number.isInteger(x[0])&&x[0]>=0&&x[0]<4&&Number.isFinite(x[1])))throw new Error('結果待ちのデータが不正です');
+    if(s.decision)throw new Error('回答待ちと結果待ちが重複しています');
+  }
+  if(s.quarterSlots!=null&&(!Array.isArray(s.quarterSlots)||s.quarterSlots.length>8||!s.quarterSlots.every(x=>x&&['o','c'].includes(x.k)&&Number.isFinite(x.at)&&x.at>=0&&x.at<=1)))throw new Error('出来事の予約が不正です');
+  if(s.quarterProgress!=null&&(!Number.isFinite(s.quarterProgress)||s.quarterProgress<0||s.quarterProgress>1))throw new Error('進行位置が不正です');
   return s;
 }
 function savePrepare(input){
@@ -2934,7 +2979,7 @@ function saveRestore(input,label,protect=true){
   if(input&&input.sv==null){
     try{if(!localStorage.getItem(KEY+'-premigrate'))localStorage.setItem(KEY+'-premigrate',JSON.stringify(input))}catch(e){}
   }
-  stop();remaining=null;setBar(0,0);resume=false;bthEnd();
+  stop();remaining=null;slots=[];setBar(0,0);resume=false;bthEnd();
   S=candidate;saveArmed=true;evHide();sceneX=null;
   go('life');centerScene();saveAutoNow();
   toast(label+'を読み込みました。');
@@ -3020,9 +3065,10 @@ $('adv1').onclick=()=>step(1);$('adv12').onclick=()=>step(S.mode==='q'?4:5);$('a
 $('newrand').onclick=()=>{const b=randomBirth();newLife(b.pid,b.year,true)};
 document.addEventListener('click',e=>{
   if(evMode&&!e.target.closest('[data-opt]')&&(e.target.closest('#evcard')||e.target.closest('.evback'))){evTap();return}
+  const action=e.target.closest('[data-action]');if(action){lifeAction(action.dataset.action);return}
   const pol=e.target.closest('[data-pol]');if(pol){S.policy=pol.dataset.pol;render();saveAutoSoon()}
   if(e.target.closest('#evbadok')&&S&&S.decision&&!evDecOk(S.decision)){addLog('c',`【イベントの不備】「${S.decision.title||'名称なし'}」に不備（${evDecWhy(S.decision)}）があり、結果を適用せずに中止した`,true);S.decision=null;evBanner();render();return}
-  const stc=e.target.closest('[data-stc]');if(stc){const why=stConfirm(stc.dataset.stc,stc.dataset.yes==='1');if(why)toast(why);render();saveAutoSoon();return}
+  const stc=e.target.closest('[data-stc]');if(stc){if(lifeBlocked())return;const why=stConfirm(stc.dataset.stc,stc.dataset.yes==='1');if(why)toast(why);render();saveAutoSoon();return}
   const op=e.target.closest('[data-opt]');if(op)choose(+op.dataset.opt);
   const p=e.target.closest('[data-p]');if(p&&birthMode==='select')newLife(p.dataset.p,undefined,false);
   const bm=e.target.closest('[data-bm]');if(bm){birthMode=bm.dataset.bm;render()}
