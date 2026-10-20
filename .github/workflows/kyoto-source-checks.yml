@@ -11,6 +11,10 @@ on:
       - develop
       - main
 
+concurrency:
+  group: kyoto-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
