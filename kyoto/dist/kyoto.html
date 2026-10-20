@@ -2998,18 +2998,18 @@ function titleScreen(){
     <div class="list" id="tlist" hidden></div>
     <p class="small">「はじめる」で、時代と境遇はランダムに決まります。</p></div>`;
   document.body.appendChild(el);
-  $('tgo').onclick=()=>{el.remove();const b=randomBirth();birthMode='random';newLife(b.pid,b.year,true)};
+  $('tgo').onclick=()=>{const b=randomBirth();birthMode='random';if(newLife(b.pid,b.year,true))el.remove()};
   if(hasAuto)$('tcont').onclick=()=>{if(saveLoadKey(SAVE_AUTO_KEY,'自動保存'))el.remove()};
   if(has)$('tmanual').onclick=()=>{if(saveLoadKey(KEY,'手動セーブ'))el.remove()};
   $('tsel').onclick=()=>{
     const l=$('tlist');l.hidden=!l.hidden;
     if(!l.innerHTML)l.innerHTML=Object.keys(PERSONAS).sort((a,b)=>PERSONAS[a].yr[0]-PERSONAS[b].yr[0]).map(k=>`<button class="chip" data-tp="${k}">${PERSONAS[k].label}</button>`).join('');
   };
-  el.addEventListener('click',e=>{const t=e.target.closest('[data-tp]');if(t){el.remove();birthMode='select';newLife(t.dataset.tp,undefined,false)}});
+  el.addEventListener('click',e=>{const t=e.target.closest('[data-tp]');if(t){birthMode='select';if(newLife(t.dataset.tp,undefined,false))el.remove()}});
   $('tgo').focus();
 }
 const BTH_ON=()=>!(navigator.webdriver&&!window.__bth);        // 自動テストの画面操作は演出を飛ばす（演出自体は window.__bth=1 で確認する）
-function newLife(pid,year,rand){if(!saveProtectPrevious())return;stop();remaining=null;setBar(0,0);resume=false;bthEnd();newGame(pid,year);saveNewLife();sceneX=null;go('life');centerScene();if(BTH_ON())birthCeremony(!!rand)}
+function newLife(pid,year,rand){if(!saveProtectPrevious())return false;stop();remaining=null;setBar(0,0);resume=false;bthEnd();newGame(pid,year);saveNewLife();sceneX=null;go('life');centerScene();if(BTH_ON())birthCeremony(!!rand);return true}
 $('play').onclick=()=>timer?(stop(),render()):start();
 $('speed').onclick=()=>{
   const old=SPEEDS[speedIdx][0];speedIdx=(speedIdx+1)%SPEEDS.length;const nw=SPEEDS[speedIdx][0];
