@@ -26,7 +26,7 @@ function stActOp(c){
 function stActsMonth(){
   const w=S.wk;
   const wl=S.hl.work;
-  if(S.age>=13&&S.policy==='仕事'&&wl!=='休止')w.worked++;                              // 仕事の実施月数（仮の根拠：生活方針が「仕事」の月）
+  if(S.age>=13&&w.form!=='未設定'&&wl!=='休止')w.worked++;                              // 就業中の実施月数。重視だけでは増やさない。
   w.acts.forEach(a=>{
     if(a.st!=='継続')return;
     if(a.k==='仕事'&&wl==='休止')return;                                   // 休止：仕事の進捗は0
