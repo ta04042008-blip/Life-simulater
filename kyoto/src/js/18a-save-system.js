@@ -42,6 +42,7 @@ function saveProtectPrevious(){
   try{
     const previous=saveArmed&&S?saveSnapshot():localStorage.getItem(SAVE_AUTO_KEY);
     if(previous)localStorage.setItem(SAVE_PROTECT_KEY,previous);
+    saveButtons();
     return true;
   }catch(e){toast('保存領域が不足しているため、現在の人生を保護できません。JSONを書き出してください。');return false}
 }
@@ -53,6 +54,7 @@ function saveAutoNow(){
     if(data===old)return true;
     if(old)localStorage.setItem(SAVE_PREV_KEY,old);
     localStorage.setItem(SAVE_AUTO_KEY,data);
+    saveButtons();
     saveWarned=false;
     return true;
   }catch(e){
@@ -114,9 +116,12 @@ async function saveImportFile(file){
   return saveRestore(parsed,'JSONファイル');
 }
 function saveButtons(){
-  const el=$('restore-protected');
-  if(!el)return;
-  try{el.hidden=!localStorage.getItem(SAVE_PROTECT_KEY)}catch(e){el.hidden=true}
+  const protectedButton=$('restore-protected'),previousButton=$('load-prev-auto');
+  if(!protectedButton||!previousButton)return;
+  try{
+    protectedButton.hidden=!localStorage.getItem(SAVE_PROTECT_KEY);
+    previousButton.hidden=!localStorage.getItem(SAVE_PREV_KEY);
+  }catch(e){protectedButton.hidden=true;previousButton.hidden=true}
 }
 window.addEventListener('pagehide',()=>saveAutoNow());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveAutoNow()});
