@@ -1,0 +1,11 @@
+import {open} from './lib.mjs';
+const {browser,page,errs}=await open();
+await page.setViewportSize({width:375,height:667});
+await page.evaluate(()=>{newGame('common');S.age=25;S.mode='q';S.nextSmallT=1e9;S.nextDecT=1e9;S.hs.dmg=2;S.hs.prep=4;
+  const e=EV_BY_ID['E01-07'];const d=evBuild(e);S.decision=JSON.parse(JSON.stringify(d));choose(0);
+  const e2=EV_BY_ID['E13-06'];const d2=evBuild(e2);S.decision=JSON.parse(JSON.stringify(d2));choose(0);
+  stMonths(1);render();go('home')});
+await page.waitForTimeout(300);
+await page.screenshot({path:'shots/s5_home.png',fullPage:true});
+console.log(await page.evaluate(()=>({sw:document.documentElement.scrollWidth,iw:innerWidth,t:$('home-body').innerText.replace(/\n/g,' / ').slice(0,420)})));
+console.log(errs);await browser.close();

@@ -1,0 +1,22 @@
+[
+ "00-assets.js",
+ "01-core-personas.js",
+ "02-abilities-temperament.js",
+ "03-family-learning-events.js",
+ "04-names-family.js",
+ "05-birth-era-personas.js",
+ "06-event-spec-engine.js",
+ "07-state-core.js",
+ "08-state-life-areas.js",
+ "09-state-cases-aftermath.js",
+ "10-state-resources.js",
+ "11-monthly-progress.js",
+ "12-ui-household.js",
+ "13-ui-decisions.js",
+ "14-ui-scene.js",
+ "15-ui-faces-relation-map.js",
+ "16-ui-profile-text.js",
+ "17-control.js",
+ "18-birth-ceremony.js",
+ "19-title-screen.js"
+]

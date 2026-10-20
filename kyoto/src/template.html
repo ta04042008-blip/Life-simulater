@@ -1,0 +1,127 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>京都の暮らし 見本</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+@@INCLUDE_CSS@@
+</style>
+
+<div class="app">
+  <div class="topbar" id="topbar">
+    <div class="row">
+      <button class="pbtn primary" id="play" aria-label="再生と停止"><span class="tri">▲</span> 再生</button>
+      <button class="pbtn" id="speed" aria-label="速度を変える">×1</button>
+      <div class="date"><b id="ym">—</b><small id="elapsed">—</small></div>
+    </div>
+    <div class="months" id="months" aria-hidden="true"></div>
+    <div class="tickbar" aria-hidden="true"><i id="tickp"></i></div>
+  </div>
+
+  <section class="screen" id="scr-life" aria-label="生活">
+    <div class="card warnbox" id="evwarn" hidden></div>
+    <div class="card">
+      <div class="who"><b id="pname">—</b><span class="tag" id="page">—</span><span class="tag" id="ptm">—</span></div>
+      <div class="sceneinfo" style="margin-top:2px"><span id="pplace">—</span><span id="pera">—</span></div>
+      <div class="stats" id="stats"></div>
+      <div class="policy">
+        <label>生活方針</label>
+        <div class="chips" id="policy" role="group" aria-label="生活方針"></div>
+      </div>
+    </div>
+    <div>
+      <div class="scene" id="scene" tabindex="0" aria-label="生活の風景（左右にスライドできます）"><div class="stage"><canvas id="cv" width="288" height="96"></canvas><canvas id="cv2" width="576" height="192"></canvas><div class="fxl" id="fxl" aria-hidden="true"></div><div class="sellab" id="sellab" hidden></div></div></div>
+      <div class="sceneinfo" style="margin-top:4px"><span id="seasonlab">—</span><span>背景はゲーム用の推定・簡略化</span></div>
+    </div>
+    <div id="decisionHost"></div>
+    <div class="card">
+      <h2>最近の出来事</h2>
+      <ul class="log" id="recent"></ul>
+    </div>
+  </section>
+
+  <section class="screen" id="scr-map" aria-label="相関図" hidden>
+    <div class="card map">
+      <h2>相関図<span class="note">線が太いほど好感度が高い人</span></h2>
+      <div class="mapbar" role="group" aria-label="相関図の表示"><button id="mzin" aria-label="拡大">＋</button><button id="mzout" aria-label="縮小">－</button><button id="mfit">全体を見る</button><button id="mme">自分へ</button></div>
+      <div class="mapwrap"><svg id="mapsvg" viewBox="0 0 340 430" preserveAspectRatio="xMidYMid meet" role="img" aria-label="人物の相関図"></svg></div>
+      <div class="mapfoot"><div class="legend" id="maplegend" style="margin-top:0"></div>
+      <p class="note">ドラッグで移動・ピンチ（2本指）で拡大縮小</p>
+      <p class="note" id="maphidden"></p></div>
+    </div>
+  </section>
+
+  <section class="screen" id="scr-home" aria-label="家計" hidden>
+    <div id="home-body"></div>
+  </section>
+
+  <section class="screen" id="scr-act" aria-label="行動" hidden>
+    <div class="card msec"><h2>行動</h2><p class="note">準備中です。</p></div>
+  </section>
+
+  <section class="screen" id="scr-menu" aria-label="メニュー" hidden>
+    <div class="card msec">
+      <h2>境遇の決め方</h2>
+      <div class="chips" id="bmode" role="group" aria-label="境遇の決め方">
+        <button class="chip" data-bm="select" aria-pressed="true">選ぶ</button>
+        <button class="chip" data-bm="random" aria-pressed="false">ランダム</button>
+      </div>
+      <h2 style="margin-top:6px">境遇を選ぶ（見本）</h2>
+      <div class="chips" id="personas" role="group" aria-label="境遇"></div>
+      <p class="note">選ぶと0歳から生まれ直します。人物・出来事・数値はすべて仮のデータです。</p>
+      <button class="pbtn" id="newrand" hidden>ランダムで生まれ直す</button>
+      <p class="note">ランダム：0〜1900年のどこかに生まれ、その時代の境遇になります。</p>
+    </div>
+    <div class="card msec">
+      <h2>時間を進める</h2>
+      <div class="mgrid">
+        <button class="pbtn" id="adv1">1か月</button>
+        <button class="pbtn" id="adv12">12か月</button>
+        <button class="pbtn" id="advd">次の判断まで</button>
+      </div>
+      <p class="note">自動再生は、×1で1回（四半期でも1年でも）あたり約30秒、×2は15秒、×4は約7秒、×30は1秒（確認用）です。メニューを開いている間は止まります。</p>
+    </div>
+    <div class="card msec">
+      <h2>記録・セーブ</h2>
+      <div class="mgrid" style="grid-template-columns:1fr 1fr">
+        <button class="pbtn" id="save">セーブ</button>
+        <button class="pbtn" id="load">ロード</button>
+        <button class="pbtn" id="totitle">タイトルへ</button>
+      </div>
+      <p class="toast" id="toast" role="status"></p>
+    </div>
+    <div class="card msec">
+      <h2>イベント台帳（全記録）</h2>
+      <ul class="log" id="ledger"></ul>
+    </div>
+    <div class="card msec">
+      <h2>この試作に含まれないもの</h2>
+      <div class="later"><span>転居・移住・帰郷の実行</span><span>候補地データ待ち</span></div>
+      <div class="later"><span>婚姻の成立</span><span>制度条件データ待ち</span></div>
+      <div class="later"><span>治療手段・病名</span><span>データ待ち</span></div>
+    </div>
+    <div class="card warnbox msec" id="stdev"></div>
+    <div class="card warnbox msec">
+      <h2>仮データについて</h2>
+      <p class="note">時代（平安1000年頃・中世1400年頃）は背景に合わせた仮置きで、史実の確認はしていません。能力値の増減、出来事、人物はすべて試作用の仮設定です。0歳から四半期（春夏秋冬）ごとに進み、20〜30歳の間（誕生時に抽選）から1年ごとに進みます。死亡は年齢別の確率を基本に、体力の低下・病気・事故で上がります（周りの人にも同じ仕組みが働き、亡くなる場合があります）。家族（養育者・兄弟姉妹）は誕生時に仮の設定で生まれ、弟や妹は後から生まれることがあります。技能の熟練度は隠しパラメータで、画面にはLv1〜Lv10だけを出します。最長110歳（仮の強制上限）、最も出やすい死亡年齢は85歳前後（調整目標）で、境遇による直接の補正はありません。史実の統計ではありません。能力は0〜1000で、★1〜5は学習・運動・仕事などの活動で伸びるときの伸びやすさです（年齢による自然な成長・回復・衰えには掛かりません）。気質は外向／内向など5つの軸で、幼いうちは「形成中」と出し、傾向がはっきりしたらタイプ（例：INFP-T）を出します。数値・確率はすべて仮です。</p>
+    </div>
+  </section>
+</div>
+
+<div class="evwin" id="evwin" role="dialog" aria-modal="true" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="プロフィール" hidden></div>
+
+<nav class="nav" aria-label="画面切り替え"><div>
+  <button data-go="life" aria-current="page">生活</button>
+  <button data-go="map">相関図</button>
+  <button data-go="home">家計</button>
+  <button data-go="act">行動</button>
+  <button data-go="menu">メニュー</button>
+</div></nav>
+
+<script>
+@@INCLUDE_JS@@
+</script>
+
+</body></html>
