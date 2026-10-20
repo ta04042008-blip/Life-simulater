@@ -72,6 +72,7 @@ $('totitle').onclick=()=>{stop();titleScreen()};
 $('save').onclick=saveManual;
 $('load').onclick=()=>saveLoadKey(KEY,'手動セーブ');
 $('load-auto').onclick=()=>saveLoadKey(SAVE_AUTO_KEY,'自動保存');
+$('load-prev-auto').onclick=()=>saveLoadKey(SAVE_PREV_KEY,'ひとつ前の自動保存');
 $('export-save').onclick=saveExport;
 $('import-save').onclick=()=>{$('import-file').click()};
 $('import-file').onchange=async e=>{const file=e.target.files&&e.target.files[0];await saveImportFile(file);e.target.value='';saveButtons()};
