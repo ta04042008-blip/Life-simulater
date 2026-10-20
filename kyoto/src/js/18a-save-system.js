@@ -6,7 +6,10 @@ const SAVE_PROTECT_KEY='kyoto-kurashi-mihon-v4-before-replace';
 const SAVE_FORMAT='earth2000-kyoto-save', SAVE_EXPORT_VERSION=1;
 let saveArmed=false, savePending=null, saveWarned=false;
 
-function saveSnapshot(){return JSON.stringify(S)}
+function saveSnapshot(){
+  if(typeof timer!=='undefined'&&timer)S.quarterProgress=Math.max(0,Math.min(1,1-(tickMs-(Date.now()-tickStart))/SPEEDS[speedIdx][0]));
+  return JSON.stringify(S)
+}
 function saveStateOk(s){
   if(!s||typeof s!=='object'||Array.isArray(s))throw new Error('保存形式が不正です');
   if(!Object.prototype.hasOwnProperty.call(PERSONAS,s.pid))throw new Error('不明な境遇です');
@@ -19,6 +22,14 @@ function saveStateOk(s){
   if(!Array.isArray(s.log)||!Array.isArray(s.chron)||!Array.isArray(s.pending))throw new Error('人生記録が不正です');
   if(s.decision!=null&&(!s.decision||!Array.isArray(s.decision.opts)||!s.decision.opts.length))throw new Error('回答待ちのデータが不正です');
   if(s.npc.some(n=>!Array.isArray(n.stats)||n.stats.length!==4||!n.stats.every(v=>Number.isFinite(v)&&v>=0&&v<=1000)))throw new Error('人物の能力値が不正です');
+  if(s.stopQueue!=null&&(!Array.isArray(s.stopQueue)||!s.stopQueue.every(x=>typeof x==='string')))throw new Error('通知の予約が不正です');
+  if(s.pendingResult!=null){
+    const r=s.pendingResult;
+    if(!r.d||typeof r.d.title!=='string'||!r.o||typeof r.o.l!=='string'||typeof r.o.x!=='string'||!Array.isArray(r.stats)||!r.stats.every(x=>Array.isArray(x)&&Number.isInteger(x[0])&&x[0]>=0&&x[0]<4&&Number.isFinite(x[1])))throw new Error('結果待ちのデータが不正です');
+    if(s.decision)throw new Error('回答待ちと結果待ちが重複しています');
+  }
+  if(s.quarterSlots!=null&&(!Array.isArray(s.quarterSlots)||s.quarterSlots.length>8||!s.quarterSlots.every(x=>x&&['o','c'].includes(x.k)&&Number.isFinite(x.at)&&x.at>=0&&x.at<=1)))throw new Error('出来事の予約が不正です');
+  if(s.quarterProgress!=null&&(!Number.isFinite(s.quarterProgress)||s.quarterProgress<0||s.quarterProgress>1))throw new Error('進行位置が不正です');
   return s;
 }
 function savePrepare(input){
@@ -78,7 +89,7 @@ function saveRestore(input,label,protect=true){
   if(input&&input.sv==null){
     try{if(!localStorage.getItem(KEY+'-premigrate'))localStorage.setItem(KEY+'-premigrate',JSON.stringify(input))}catch(e){}
   }
-  stop();remaining=null;setBar(0,0);resume=false;bthEnd();
+  stop();remaining=null;slots=[];setBar(0,0);resume=false;bthEnd();
   S=candidate;saveArmed=true;evHide();sceneX=null;
   go('life');centerScene();saveAutoNow();
   toast(label+'を読み込みました。');
