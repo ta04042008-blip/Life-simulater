@@ -100,7 +100,7 @@ function birthCeremony(rand){
       <button class="big" id="bgo">この名前で人生を始める</button></div>`);
     bthBeep(300,.12,.05,'triangle');
     const inp=$('bnm');
-    const apply=()=>{const v=inp.value.trim();if(v&&v.length<=12)S.myName=v};
+    const apply=()=>{const v=inp.value.trim();if(v&&v.length<=12){S.myName=v;saveAutoSoon()}};
     inp.oninput=apply;
     $('bgo').onclick=()=>{apply();bthEnd();render();window.scrollTo(0,0)};
   }
