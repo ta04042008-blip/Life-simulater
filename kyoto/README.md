@@ -49,8 +49,10 @@ kyoto/
 │     └─ 19-title-screen.js      タイトル画面・セーブ／ロードの操作
 ├─ assets/                 人物の絵(64×64)45点・背景(288×96)68点・フォント2点（詳細は assets/README.md）
 ├─ dist/kyoto.html         組み立て済みの完成品（ソースから作り直せる。ソースを変えたら作り直してコミット）
+├─ designer/index.html     設計室（数値・境遇・人物・名前を編集して試遊するツール。詳しくは designer/README.md）
 ├─ tools/                  build.mjs / check.mjs / mkfont.py
 │     └─ 18a-save-system.js    自動保存・安全な復元・JSON入出力
+│     └─ 18b-design-hook.js    設計室の受け口（設計データがある時だけ値を差し替える。公開版では何もしない）
 └─ verify/                 画面テスト（t_*.mjs）・旧セーブの見本(fixtures/)・使わなくなった旧テスト(archive/)
 ```
 

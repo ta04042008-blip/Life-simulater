@@ -34,14 +34,14 @@ function makeFamily(pid){
   const mk=(name,aff,off,skill,from,fromText)=>({name:name,rel:'家族',aff,from,known:from===0,off,skill,skillName:P.skillName,dead:false,deadAge:null,hist:[],extra:{},fromText:fromText||null,...mkPerson(P,Math.max(0,off))});
   const need=FAMNEED[pid];let missing=0;
   need.forEach(r=>{
-    if(Math.random()<0.12&&!(need.length===2&&missing===1)){missing++}
+    if(Math.random()<FAM_MISS&&!(need.length===2&&missing===1)){missing++}
     else out.push(mk(r,r==='母'?58:52,r==='母'?26:30,400+rnd(250),0));
   });
   if(missing>0)out.push(mk('祖母',55,52,400+rnd(200),0));
-  const r=Math.random(),cnt=r<0.35?0:r<0.75?1:2;
+  const r=Math.random(),cnt=r<FAM_SIB[0]/100?0:r<(FAM_SIB[0]+FAM_SIB[1])/100?1:2;
   const ELD=[['兄','姉'],['次兄','次姉']],YNG=[['弟','妹'],['末弟','末妹']];let e=0,y=0;
   for(let i=0;i<cnt;i++){
-    if(Math.random()<0.5)out.push(mk(ELD[e++][rnd(2)],35+rnd(20),2+rnd(5),100+rnd(150),0));
+    if(Math.random()<FAM_ELDER)out.push(mk(ELD[e++][rnd(2)],35+rnd(20),2+rnd(5),100+rnd(150),0));
     else{const off=-(2+rnd(3));out.push(mk(YNG[y++][rnd(2)],42+rnd(14),off,40,-off,'が生まれた。'))}
   }
   return out;
@@ -52,7 +52,7 @@ function newGame(pid,year){
   evHide();
   const P=PERSONAS[pid],me=mkPerson(P,0);
   if(year==null)year=P.yr[0]+rnd(P.yr[1]-P.yr[0]);      // 生まれ年：境遇の時代の中でランダム     // 出生時の能力・★・気質を、ここで一度だけ抽選する
-  S={pid,ver:5,year,era:eraText(year),q:0,age:0,t:0,mode:'q',switchAge:20+rnd(11),policy:'交流',
+  S={pid,ver:5,year,era:eraText(year),q:0,age:0,t:0,mode:'q',switchAge:SWITCH_AGE[0]+rnd(SWITCH_AGE[1]-SWITCH_AGE[0]+1),policy:'交流',
      stats:me.stats,tgt:me.tgt,star:me.star,sx:me.sx,tm:me.tm,
      skill:0,
      npc:P.npc.map((n,i)=>({name:n[0],rel:n[1],aff:n[2],from:n[3],known:n[3]===0,off:NPCOFF[pid][i],skill:NPCSK[pid][i],skillName:NPCSKN[pid][i],dead:false,deadAge:null,hist:[],extra:{},...mkPerson(P,NPCOFF[pid][i])})),

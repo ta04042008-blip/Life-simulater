@@ -16,7 +16,7 @@ const starMult=s=>STAR_MULT[clamp(Math.round(s)||1,1,5)-1];
 const SAT=v=>clamp(1.5*(1-v/1000),0.08,1);            // 高い能力値ほど成長が緩やか（★の倍率のあとに掛かる＝高い★にも効く）
 /* ★の上下：活動の積み重ね（sx＝隠しの経験値）が溜まると上がり、使わない状態が続くと下がる。特別な経験では一気に動く */
 /* XP_POL＝生活方針1ポイント・1年あたり／XP_EV＝出来事1回の成長量あたり（出来事は小さく、継続する活動を主にする）／XP_NPC＝周りの人の活動1回／XP_DECAY＝使わない年の目減り（13歳から） */
-const XP_POL=2.5,XP_EV=0.12,XP_NPC=2,XP_UP=[90,190,320,500],XP_DOWN=[0,60,90,120,160],XP_DECAY_ME=3,XP_DECAY_NPC=2.2;
+let XP_POL=2.5,XP_EV=0.12,XP_NPC=2,XP_UP=[90,190,320,500],XP_DOWN=[0,60,90,120,160],XP_DECAY_ME=3,XP_DECAY_NPC=2.2;
 const xpAdd=(p,i,amt)=>{p.sx[i]+=amt};
 function xpDecay(p,yrs,age,dec){if(age<13)return;for(let i=0;i<4;i++)p.sx[i]-=dec*yrs}
 function starCheck(p,i,log){

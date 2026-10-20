@@ -382,7 +382,7 @@ const QS=['spring','summer','autumn','winter'];
 const QL=['春','夏','秋','冬'];
 const BANDS=[[0,'幼児期'],[6,'学童期'],[13,'若年期'],[30,'壮年期'],[60,'高齢期']];
 const bandOf=a=>{let b=BANDS[0][1];for(const [m,n] of BANDS)if(a>=m)b=n;return b};
-const MAXAGE=110;                       // 仮の強制上限
+let MAXAGE=110;                         // 仮の強制上限
 const HZ={B:1.5e-5,k:0.09,child:0.03,childDecay:1.1,acc:0.0015,illMult:3,sevMult:6}; // すべて仮の数値
 const RANDW={aristocrat:5,common:45,farm:35,artisan:15};                              // 仮の確率
 function annualHazard(age,v,ill){
@@ -516,7 +516,7 @@ const starMult=s=>STAR_MULT[clamp(Math.round(s)||1,1,5)-1];
 const SAT=v=>clamp(1.5*(1-v/1000),0.08,1);            // 高い能力値ほど成長が緩やか（★の倍率のあとに掛かる＝高い★にも効く）
 /* ★の上下：活動の積み重ね（sx＝隠しの経験値）が溜まると上がり、使わない状態が続くと下がる。特別な経験では一気に動く */
 /* XP_POL＝生活方針1ポイント・1年あたり／XP_EV＝出来事1回の成長量あたり（出来事は小さく、継続する活動を主にする）／XP_NPC＝周りの人の活動1回／XP_DECAY＝使わない年の目減り（13歳から） */
-const XP_POL=2.5,XP_EV=0.12,XP_NPC=2,XP_UP=[90,190,320,500],XP_DOWN=[0,60,90,120,160],XP_DECAY_ME=3,XP_DECAY_NPC=2.2;
+let XP_POL=2.5,XP_EV=0.12,XP_NPC=2,XP_UP=[90,190,320,500],XP_DOWN=[0,60,90,120,160],XP_DECAY_ME=3,XP_DECAY_NPC=2.2;
 const xpAdd=(p,i,amt)=>{p.sx[i]+=amt};
 function xpDecay(p,yrs,age,dec){if(age<13)return;for(let i=0;i<4;i++)p.sx[i]-=dec*yrs}
 function starCheck(p,i,log){
@@ -796,6 +796,8 @@ function nameNpcs(s){                      // 役割名のままの人物に、�
 }
 // 家族の生成（仮）：n0 が家族の境遇は、もう一人の親だけ追加。親が欠ける場合は祖母が加わる。兄弟姉妹は0〜2人
 const FAMNEED={aristocrat:['父'],common:['父'],farm:['母'],artisan:['母','父']};
+let FAM_MISS=0.12, FAM_SIB=[35,40,25], FAM_ELDER=0.5;   // 養育者が欠ける確率／兄弟姉妹0・1・2人の割合（％）／兄・姉になる確率（すべて仮）
+let SWITCH_AGE=[20,30];                               // 四半期→1年単位へ切り替わる年齢の範囲（誕生時に一様に抽選）
 /* ---------- 生まれ年と時代／新しい境遇（背景は既存のものとは別・文章と絵は近い境遇のものを流用） ---------- */
 const eraName=y=>y<794?'古代':y<1185?'平安':y<1333?'鎌倉':y<1573?'室町':y<1603?'安土桃山':y<1868?'江戸':y<1912?'明治':y<1926?'大正':y<1989?'昭和':'平成';
 const eraText=(y)=>`${eraName(y)}（${y}年頃）`;
@@ -831,14 +833,14 @@ function makeFamily(pid){
   const mk=(name,aff,off,skill,from,fromText)=>({name:name,rel:'家族',aff,from,known:from===0,off,skill,skillName:P.skillName,dead:false,deadAge:null,hist:[],extra:{},fromText:fromText||null,...mkPerson(P,Math.max(0,off))});
   const need=FAMNEED[pid];let missing=0;
   need.forEach(r=>{
-    if(Math.random()<0.12&&!(need.length===2&&missing===1)){missing++}
+    if(Math.random()<FAM_MISS&&!(need.length===2&&missing===1)){missing++}
     else out.push(mk(r,r==='母'?58:52,r==='母'?26:30,400+rnd(250),0));
   });
   if(missing>0)out.push(mk('祖母',55,52,400+rnd(200),0));
-  const r=Math.random(),cnt=r<0.35?0:r<0.75?1:2;
+  const r=Math.random(),cnt=r<FAM_SIB[0]/100?0:r<(FAM_SIB[0]+FAM_SIB[1])/100?1:2;
   const ELD=[['兄','姉'],['次兄','次姉']],YNG=[['弟','妹'],['末弟','末妹']];let e=0,y=0;
   for(let i=0;i<cnt;i++){
-    if(Math.random()<0.5)out.push(mk(ELD[e++][rnd(2)],35+rnd(20),2+rnd(5),100+rnd(150),0));
+    if(Math.random()<FAM_ELDER)out.push(mk(ELD[e++][rnd(2)],35+rnd(20),2+rnd(5),100+rnd(150),0));
     else{const off=-(2+rnd(3));out.push(mk(YNG[y++][rnd(2)],42+rnd(14),off,40,-off,'が生まれた。'))}
   }
   return out;
@@ -849,7 +851,7 @@ function newGame(pid,year){
   evHide();
   const P=PERSONAS[pid],me=mkPerson(P,0);
   if(year==null)year=P.yr[0]+rnd(P.yr[1]-P.yr[0]);      // 生まれ年：境遇の時代の中でランダム     // 出生時の能力・★・気質を、ここで一度だけ抽選する
-  S={pid,ver:5,year,era:eraText(year),q:0,age:0,t:0,mode:'q',switchAge:20+rnd(11),policy:'交流',
+  S={pid,ver:5,year,era:eraText(year),q:0,age:0,t:0,mode:'q',switchAge:SWITCH_AGE[0]+rnd(SWITCH_AGE[1]-SWITCH_AGE[0]+1),policy:'交流',
      stats:me.stats,tgt:me.tgt,star:me.star,sx:me.sx,tm:me.tm,
      skill:0,
      npc:P.npc.map((n,i)=>({name:n[0],rel:n[1],aff:n[2],from:n[3],known:n[3]===0,off:NPCOFF[pid][i],skill:NPCSK[pid][i],skillName:NPCSKN[pid][i],dead:false,deadAge:null,hist:[],extra:{},...mkPerson(P,NPCOFF[pid][i])})),
@@ -892,7 +894,7 @@ const EV_GENRES=['日常・暮らし','家族・養育','交流・友情','恋�
 const EV_BAND={a:[1,2],s:[3,5],b:[6,10]};                                   // 区分ごとの変化量（確認済み：自動＝小、小さな選択＝中、大きな選択＝大）
 const EV_MAP={a:{1:1,2:2,3:2},s:{1:3,2:5,3:5},b:{1:6,2:10,3:10}};            // 設計案の値 → 区分の範囲への換算（仮）
 const EV_FOL=[3,5];                                                          // 後日談の成功時の変化量（中程度）
-const EV_NPC_MAX=18, EV_CD=0.25, EV_D_AFF=60, EV_P0=0.5;                     // 人物数の上限（仮）／同じ出来事の最短間隔（年）／保留型が動く好感度（仮）／基本成功率50％
+let EV_NPC_MAX=18, EV_CD=0.25, EV_D_AFF=60, EV_P0=0.5;                     // 人物数の上限（仮）／同じ出来事の最短間隔（年）／保留型が動く好感度（仮）／基本成功率50％
 const EV_POLG={'交流':2,'学び':4,'仕事':5,'家族':1,'休養':7};                  // 生活方針 → 重みが2倍になるジャンル（仮）
 const EV_GROUPS={
  self:{}, fam:{rel:'家族'}, cofam:{rel:'家族',alias:[]},
@@ -1117,10 +1119,10 @@ evInit(EV_RAW);
    ・数値・期間・文面はすべて【仮】。住居・世帯・健康（段階5〜7）はまだ無い：それを必要とするイベントは候補から外し、一覧で報告する
    ・イベントの効果は ST_ROWS（イベントID|選択肢の番号 → 変更指示の一覧）に1行ずつ書いてある。書いていない行は動かさず、保留として報告する
    ================================================================== */
-const ST_VER=1, ST_FREE=10, ST_U=100, ST_MAXTH=12, ST_KEEP=40;
+let ST_VER=1, ST_FREE=10, ST_U=100, ST_MAXTH=12, ST_KEEP=40;
 const ST_READY={'件':1,'情報':1,'仕事':1,'資源':1,'住居':1,'世帯':1,'健康':1};                       // 導入済みの仕組み
 let ST_EXCL=true;                                                        // true＝未導入の仕組みが要るイベントは出さない（仕様書 ④）
-const ST_INIT={fund:30,food:20,goods:10}, ST_INC=12, ST_LIV=10, ST_FIN=10, ST_FOUT=10, ST_BMAX=2;   // 世帯の初期量・月収・生活費・食料の補給と消費（仮）
+let ST_INIT={fund:30,food:20,goods:10}, ST_INC=12, ST_LIV=10, ST_FIN=10, ST_FOUT=10, ST_BMAX=2;   // 世帯の初期量・月収・生活費・食料の補給と消費（仮）
 const ST_DATA={"rows":{"E01-01|0":[{"t":"hd","m":"道具の破損","sys":"情報","why":"利用中の道具の記録が無いため、物品の状態は作らずに保留した"}],"E01-02|0":[{"t":"rs","m":"可処分食料減","a":"food","z":"s","sg":-1,"hard":1,"ft":1}],"E01-04|0":[{"t":"th","m":"探索開始","sk":"search","ck":"探索","ttl":"落とし物の持ち主を探す","w":1,"jd":"c","ok":"","du":3,"ex":"持ち主は見つからないまま、いったん区切りとなった。","hold":"落とし物の持ち主の候補データが未設定"}],"E01-04|1":[{"t":"in","m":"預け記録","k":"預け物","x":"拾った物を、近くの人に預けた。","cf":"本人確認","sh":"me"}],"E02-08|0":[{"t":"th","m":"探索開始","sk":"search","ck":"探索","ttl":"離れた家族の行方を調べる","w":4,"jd":"c","ok":"","du":13,"ex":"探索はいったん区切りをつけた。消息は分からないままだ。","cur":"離れた家族の消息は、まだ分かっていない。探索は続いている。","hold":"離れた家族の探索先の候補データが未設定"}],"E02-08|1":[{"t":"th","m":"伝達準備","sk":"plan","ck":"便り","ttl":"離れた家族へ便りを託す","w":1,"jd":"c","ok":"便りを託した。届いたかどうかは、まだ分からない。","du":4,"ex":"便りを託せないまま、時が過ぎた。","ef":[["info","約束","離れた家族へ便りを託した。（到達は未確認）","本人確認"]]}],"E02-10|0":[{"t":"th","m":"継承準備","sk":"ask","ck":"継承","ttl":"家業を引き継ぐ準備","w":4,"jd":"B","ok":"家業の担い手に、あなたが加わった。","tg":"p","du":8,"ng":"引継ぎの話は進まなかった。","ex":"返事のないまま、期限が過ぎた。","rq":{"worked":12,"lv":3},"ef":[["biz"]],"lost":"相手が亡くなり、引継ぎの話は止まった。"}],"E02-10|1":[{"t":"th","m":"代替探索","sk":"search","ck":"探索","ttl":"家業の別の担い手を探す","w":1,"jd":"c","ok":"家業の別の担い手の候補として、{c}の名が挙がった。","du":3,"ex":"別の担い手は見つからなかった。","cd":["work","fam"]}],"E03-02|0":[{"t":"in","m":"守秘約束","k":"約束","x":"友人の秘密を守ると約束した。","cf":"本人確認","sh":"me","w":"p"}],"E03-02|1":[{"t":"in","m":"追加情報","k":"説明","x":"秘密について、危険がないか聞き取った。","cf":"伝聞","sh":"me","w":"p"}],"E03-04|0":[{"t":"th","m":"誤解解消候補","sk":"ask","ck":"説明","ttl":"誤解を解く説明","w":1,"jd":"B","ok":"誤解は解け、{n}はうなずいてくれた。","tg":"p","du":3,"ng":"{n}には、まだ受け入れてもらえない。","ex":"返事のないまま、期限が過ぎた。"}],"E03-05|0":[{"t":"tm","m":"時間消費"}],"E03-05|1":[{"t":"th","m":"紹介候補","sk":"search","ck":"紹介","ttl":"知人を助ける紹介先を探す","w":1,"jd":"c","ok":"{c}が、助けになってくれそうだと分かった。","du":3,"ex":"紹介先は見つからなかった。","cd":["acq","friend","neigh"]}],"E03-07|0":[{"t":"th","m":"共同計画","sk":"plan","ck":"共同","ttl":"友人との共同活動","w":2,"jd":"E","ok":"共同活動をやり遂げ、成果が出た。","tg":"p","du":6,"ng":"共同活動は終えたが、成果は乏しかった。","ex":"時間が合わず、共同活動は見送りとなった。","tm":2}],"E03-08|0":[{"t":"th","m":"情報確認","sk":"ask","ck":"確認","ttl":"噂の本人に確かめる","w":1,"jd":"B","ok":"本人から話を聞くことができた。","tg":"p","du":3,"ng":"本人からは、はっきりした話を聞けなかった。（不明のまま）","ex":"返事のないまま、期限が過ぎた。","ef":[["info","噂","噂について、本人から話を聞けた。（確認済み）","本人確認"]]}],"E03-08|1":[{"t":"in","m":"拡散防止","k":"噂","x":"噂を広めずにおくことにした。","cf":"本人確認","sh":"me"}],"E03-09|0":[{"t":"th","m":"証言準備","sk":"ask","ck":"証言","ttl":"証言をまとめる","w":3,"jd":"B","ok":"証言は受け入れられた。","tg":["local","p"],"du":8,"ng":"証言は聞き入れられなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["info","証言","知っている事実を、証言としてまとめた。","本人確認"]],"sx":{"ok":"証言は受け入れられた。","ng":"証言は聞き入れられなかった。"}}],"E03-09|1":[{"t":"th","m":"支援探索","sk":"search","ck":"探索","ttl":"友人を支える安全な支援先を探す","w":1,"jd":"c","ok":"{c}が、支えになってくれそうだ。（証言をしたわけではない）","du":3,"ex":"支援先は見つからなかった。","cd":["acq","friend","neigh"]}],"E04-02|0":[{"t":"th","m":"面会予約","sk":"plan","ck":"面会","ttl":"会う約束","w":1,"jd":"c","ok":"{n}と会って、話をした。","tg":"p","du":4,"ex":"予定が合わず、会えなかった。","tm":1}],"E04-04|0":[{"t":"th","m":"返事待ち","sk":"ask","ck":"返事","ttl":"手紙への返事","w":1,"jd":"B","ok":"{n}から返事が届いた。","tg":"p","du":3,"ng":"{n}からの返事は、そっけなかった。","ex":"返事は届かなかった。"}],"E04-04|1":[{"t":"rs","m":"資源減","a":"fund","z":"s","sg":-1,"hard":1},{"t":"th","m":"返事待ち","sk":"ask","ck":"返事","ttl":"贈り物への返事","w":1,"jd":"B","ok":"{n}から、礼の返事が届いた。","tg":"p","du":3,"ng":"{n}からの返事は、そっけなかった。","ex":"返事は届かなかった。"}],"E04-05|0":[{"t":"th","m":"面会候補","sk":"search","ck":"探索","ttl":"評判の本人に確かめる機会を探す","w":1,"jd":"c","ok":"{c}に直接確かめる機会が持てそうだ。（まだ会ってはいない）","du":3,"ex":"確かめる機会は見つからなかった。","cd":["@p"]}],"E04-05|1":[{"t":"in","m":"情報を伝聞として記録","k":"噂","x":"評判を聞いた。確かなことは分からない。","cf":"伝聞","sh":"me","w":"p"}],"E05-02|0":[{"t":"tm","m":"練習時間"},{"t":"ac","m":"練習時間","k":"練習","op":"once","tm":1}],"E05-06|1":[{"t":"th","m":"学習予約","sk":"plan","ck":"学習","ttl":"別の日に学ぶ","w":1,"jd":"c","ok":"予定の日に学ぶことができた。","du":4,"ex":"予定の日に学べなかった。","tm":2,"ef":[["act","学習"]]}],"E05-07|0":[{"t":"th","m":"応募待ち","sk":"ask","ck":"弟子入り","ttl":"弟子入りの願い出","w":4,"jd":"B","ok":"弟子入りが許され、修業が始まった。","tg":["mentor","p"],"du":8,"ng":"今回は断られた。","ex":"返事のないまま、期限が過ぎた。","ef":[["train"]],"lost":"師が亡くなり、願い出は止まった。"}],"E05-07|1":[{"t":"th","m":"見学予定","sk":"ask","ck":"見学","ttl":"見学の頼み","w":1,"jd":"B","ok":"見学を許された。（弟子入りしたわけではない）","tg":["mentor","p"],"du":3,"ng":"見学は断られた。","ex":"返事のないまま、期限が過ぎた。","ef":[["visit"]]}],"E05-10|0":[{"t":"th","m":"指導計画","sk":"plan","ck":"指導","ttl":"教える役を引き受ける","w":1,"jd":"c","ok":"教える時間を持つことができた。","du":4,"ex":"時間が取れず、教えられなかった。","tm":2,"ef":[["act","指導"]],"sx":{"ok":"教える日々を重ねてきた。"}}],"E05-10|1":[{"t":"th","m":"紹介予定","sk":"plan","ck":"紹介","ttl":"別の先生の紹介","w":1,"jd":"c","ok":"別の先生を紹介することができた。（自分で教えたわけではない）","du":4,"ex":"紹介の機会は訪れなかった。"}],"E06-02|0":[{"t":"tm","m":"時間消費"}],"E06-04|0":[{"t":"th","m":"確認開始","sk":"plan","ck":"確認","ttl":"取引の記録を確かめる","w":1,"jd":"c","ok":"記録を照らし合わせて確かめた。","du":4,"ex":"確かめる時間が取れなかった。","tm":1,"ef":[["info","説明","取引の記録を照らし合わせて確かめた。","記録照合"]]}],"E06-04|1":[{"t":"th","m":"確認開始","sk":"ask","ck":"確認","ttl":"先方の事情を聞く","w":1,"jd":"B","ok":"先方の事情を聞くことができた。","tg":"p","du":3,"ng":"先方の事情は、聞けなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["info","説明","先方の事情を聞いた。","伝聞"]]}],"E06-06|0":[{"t":"th","m":"協議開始","sk":"ask","ck":"協議","ttl":"仕事の分担を相談する","w":1,"jd":"B","ok":"分担について、皆で話がまとまった。","tg":["work","p"],"du":3,"ng":"話はまとまらなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["meth","相談済み"]]}],"E06-06|1":[{"t":"th","m":"返答待ち","sk":"ask","ck":"返答","ttl":"上役への申し出","w":1,"jd":"B","ok":"上役から返答があった。","tg":["work","p"],"du":3,"ng":"上役の返答は、はかばかしくなかった。","ex":"返事のないまま、期限が過ぎた。"}],"E06-07|0":[{"t":"th","m":"交渉待ち","sk":"ask","ck":"報酬","ttl":"報酬の見直しの願い","w":3,"jd":"B","ok":"報酬の見直しが認められた。来月から改まる。","tg":["work","p"],"du":8,"ng":"見直しは認められなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["bonus"]]}],"E06-08|0":[{"t":"th","m":"転業応募","sk":"ask","ck":"転業","ttl":"新しい生業への応募","w":4,"jd":"B","ok":"応募が通り、仕事の場が変わった。","tg":["work","p"],"du":8,"ng":"応募は通らなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["trade"]],"ob":"職種"}],"E06-10|0":[{"t":"th","m":"独立準備","sk":"ask","ck":"独立","ttl":"独立の準備","w":4,"jd":"B","ok":"独立して、自分の仕事を始めた。","tg":["work","p"],"du":12,"ng":"独立は認められなかった。（費用は使わなかった）","ex":"条件が整わないまま、期限が過ぎた。","rq":{"worked":24,"lv":5,"fund":8,"goods":3},"ef":[["indep"],["spend","fund",8],["spend","goods",3]]}],"E07-01|0":[{"t":"rs","m":"所持資源減少（額未定）","a":"fund","z":"s","sg":-1,"hard":0}],"E07-02|0":[{"t":"rs","m":"資源減","a":"fund","z":"s","sg":-1,"hard":1}],"E07-02|1":[{"t":"nt","m":"資源維持","x":"余った分を、貯えに回した。"}],"E07-03|0":[{"t":"hd","m":"資源増減（実績依存）","sys":"仕事","why":"仕事の実績区分が記録されていないため、資金の増減は保留した"}],"E07-04|0":[{"t":"ln","m":"貸付債権","z":"m"}],"E07-06|0":[{"t":"dc","m":"債務確認"}],"E07-06|1":[{"t":"in","m":"追加情報","k":"説明","x":"家計について理由を尋ね、説明を聞いた。","cf":"伝聞","sh":"me","w":"p"}],"E07-07|0":[{"t":"th","m":"契約協議","sk":"conf","ck":"契約","ttl":"借入の条件","w":1,"jd":"c","ok":"条件を確かめ、借りることにした。","tg":"p","du":6,"ng":"借入は見送った。","ex":"返事を出さないまま、期限が過ぎた。","ef":[["borrow"]],"amt":"m"}],"E07-07|1":[{"t":"th","m":"代替探索","sk":"search","ck":"探索","ttl":"借入以外の支えを探す","w":1,"jd":"c","ok":"{c}に、支払の相談ができそうだ。（借入はしていない）","du":3,"ex":"相談先は見つからなかった。","cd":["acq","work","friend"]}],"E07-08|0":[{"t":"th","m":"継承協議","sk":"ask","ck":"継承","ttl":"財産を託す協議","w":4,"jd":"B","ok":"託し方について話し合い、受渡しの取り決めを記録した。（まだ渡してはいない）","tg":"p","du":8,"ng":"託し方で意見が分かれた。","ex":"返事のないまま、期限が過ぎた。","ef":[["plan","継承"]],"amt":"m"}],"E07-08|1":[{"t":"th","m":"分配協議","sk":"ask","ck":"分配","ttl":"分け方の協議","w":4,"jd":"B","ok":"分け方について話し合い、配分の取り決めを記録した。（まだ渡してはいない）","tg":"p","du":8,"ng":"分け方で意見が分かれた。","ex":"返事のないまま、期限が過ぎた。","rq":{"hold":1},"ef":[["plan","分配"]],"amt":"m"}],"E07-09|0":[{"t":"hd","m":"評価額変動（要算定）","sys":"資源","why":"評価の対象となる資産が設定されていないため、保留した"}],"E07-10|0":[{"t":"th","m":"出資協議","sk":"conf","ck":"出資","ttl":"事業への出資","w":1,"jd":"c","ok":"出資することにした。利益の約束はない。","du":6,"ng":"出資は見送った。","ex":"返事を出さないまま、期限が過ぎた。","ef":[["invest"]],"amt":"m"}],"E08-04|0":[{"t":"tm","m":"時間消費"}],"E08-04|1":[{"t":"th","m":"支援依頼","sk":"ask","ck":"支援","ttl":"世話を頼む","w":1,"jd":"B","ok":"世話を引き受けてくれる人が見つかった。","tg":["fam","neigh","p"],"du":3,"ng":"世話を頼める人は見つからなかった。","ex":"返事のないまま、期限が過ぎた。"}],"E08-06|0":[{"t":"th","m":"調整待ち","sk":"ask","ck":"調整","ttl":"休めるように頼む","w":1,"jd":"B","ok":"休めるように調整してもらえた。","tg":["work","p"],"du":3,"ng":"調整は難しいと言われた。","ex":"返事のないまま、期限が過ぎた。"}],"E08-06|1":[{"t":"ac","m":"進捗少","k":"仕事","op":"half","tm":1}],"E09-06|0":[{"t":"th","m":"感想待ち","sk":"ask","ck":"感想","ttl":"作品の感想","w":1,"jd":"B","ok":"作品を見てもらい、感想を聞かせてもらえた。","tg":"p","du":3,"ng":"感想は、聞けなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["info","感想","作品を見てもらい、感想を聞いた。","伝聞"]],"ob":"作品"}],"E09-06|1":[{"t":"ac","m":"制作継続","k":"制作","op":"start","tm":1,"ob":"作品"}],"E09-07|0":[{"t":"ac","m":"芸事修業計画","k":"芸の修業","op":"start","tm":1,"len":12}],"E09-08|0":[{"t":"th","m":"発表計画","sk":"plan","ck":"発表","ttl":"作品の発表","w":4,"jd":"E","ok":"作品を発表し、評判が返ってきた。","tg":"p","du":8,"ng":"作品を発表したが、反応は静かだった。","ex":"準備が間に合わず、発表は見送った。","tm":3,"ef":[["publish"]],"ob":"作品"}],"E09-10|0":[{"t":"ac","m":"趣味継続","k":"趣味","op":"start","tm":1,"ob":"趣味"}],"E09-10|1":[{"t":"ac","m":"趣味休止","k":"趣味","op":"stop","tm":1,"ob":"趣味"}],"E10-04|0":[{"t":"th","m":"参加予約","sk":"plan","ck":"参加","ttl":"祭礼への参加","w":3,"jd":"c","ok":"祭礼に参加することができた。","du":6,"ex":"日程が合わず、参加できなかった。","tm":2,"ob":"行事"}],"E10-07|0":[{"t":"th","m":"実践変更の相談","sk":"ask","ck":"相談","ttl":"信仰の関わり方の相談","w":3,"jd":"B","ok":"関わり方を変えることで、話がまとまった。","tg":["local","p"],"du":8,"ng":"今のままで、と言われた。","ex":"返事のないまま、期限が過ぎた。","ef":[["meth","変更済み"]]}],"E10-08|0":[{"t":"th","m":"役割準備","sk":"ask","ck":"役割","ttl":"行事の担い手の準備","w":4,"jd":"B","ok":"行事の担い手に加わった。","tg":["local","p"],"du":8,"ng":"今回は任されなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["role","行事の担い手"]]}],"E10-08|1":[{"t":"th","m":"後継探索","sk":"ask","ck":"推薦","ttl":"別の担い手の推薦","w":2,"jd":"B","ok":"推薦した人が、引き受けてくれた。","tg":["acq","friend","local","p"],"du":6,"ng":"推薦した人は、引き受けなかった。","ex":"返事のないまま、期限が過ぎた。"}],"E10-10|0":[{"t":"th","m":"対話準備","sk":"ask","ck":"対話","ttl":"慣行についての話し合い","w":4,"jd":"B","ok":"話し合いに応じてもらえた。見直しに向けた合意を得た。","tg":["local","p"],"du":8,"ng":"話し合いはまとまらなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["info","合意","慣行について、見直しに向けた話し合いの合意を得た。","本人確認"]],"sx":{"ok":"話し合いが通じ、見直しに向けた合意を得た。"}}],"E10-10|1":[{"t":"th","m":"支援探索","sk":"search","ck":"探索","ttl":"慣行について別の支援先を探す","w":1,"jd":"c","ok":"{c}が、支えになってくれそうだ。（慣行は変わっていない）","du":3,"ex":"支援先は見つからなかった。","cd":["acq","friend","local"]}],"E11-02|0":[{"t":"tm","m":"時間消費"}],"E11-02|1":[{"t":"th","m":"予定","sk":"plan","ck":"手伝い","ttl":"隣人の手伝いを来月に回す","w":1,"jd":"c","ok":"約束の日に、隣人を手伝った。","tg":"p","du":4,"ex":"約束の日に手伝えなかった。","tm":2}],"E11-04|0":[{"t":"th","m":"調停案","sk":"ask","ck":"調停","ttl":"共用場所の利用順の提案","w":1,"jd":"B","ok":"利用順の提案が受け入れられた。","tg":["neigh","p"],"du":3,"ng":"提案はまとまらなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["info","合意","共用場所の利用順を決めた。","本人確認"]]}],"E11-04|1":[{"t":"in","m":"追加情報","k":"要望","x":"共用場所の困りごとを聞いた。","cf":"伝聞","sh":"me","w":"p"}],"E11-06|0":[{"t":"th","m":"協議開始","sk":"ask","ck":"協議","ttl":"争いの事情を聞く","w":1,"jd":"B","ok":"事情を聞き、話がまとまった。","tg":"p","du":3,"ng":"事情は聞けたが、話はまとまらなかった。","ex":"返事のないまま、期限が過ぎた。"}],"E11-06|1":[{"t":"th","m":"仲裁依頼","sk":"ask","ck":"仲裁","ttl":"別の仲裁役への依頼","w":1,"jd":"B","ok":"仲裁を引き受けてもらえた。","tg":["local","neigh","p"],"du":3,"ng":"仲裁は引き受けてもらえなかった。","ex":"返事のないまま、期限が過ぎた。"}],"E11-07|0":[{"t":"th","m":"役割受諾待ち","sk":"ask","ck":"役割","ttl":"地域の役目の受諾","w":3,"jd":"B","ok":"地域の役目に任じられた。","tg":["local","p"],"du":8,"ng":"今回は任じられなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["role","地域の役割"]]}],"E11-08|0":[{"t":"th","m":"共同備蓄計画","sk":"plan","ck":"備蓄","ttl":"共同の備えのための物資","w":1,"jd":"c","ok":"物資を出し合い、共同の備えができた。","du":4,"ex":"物資を出せないまま、時が過ぎた。","tm":2,"ef":[["xfer","goods","cstock"]],"co":{"a":"goods"},"amt":"m"}],"E11-08|1":[{"t":"th","m":"家庭備蓄計画","sk":"plan","ck":"備蓄","ttl":"家庭の備えのための食料","w":1,"jd":"c","ok":"食料の一部を、家の備えに回した。","du":4,"ex":"備えに回せないまま、時が過ぎた。","tm":1,"ef":[["xfer","food","home"]],"co":{"a":"food"},"amt":"m"}],"E12-02|0":[{"t":"in","m":"説明記録","k":"説明","x":"知っている事実を、役人に伝えた。","cf":"本人確認","sh":"ppl","w":"p"}],"E12-02|1":[{"t":"th","m":"期限付き照会","sk":"plan","ck":"照会","ttl":"説明のための確認期限","w":1,"jd":"c","ok":"期限が来た。まだ答えは届いていない。","du":2,"ex":"期限が来た。まだ答えは届いていない。"}],"E12-04|0":[{"t":"in","m":"情報入手","k":"説明","x":"被害者の話を聞いた。","cf":"伝聞","sh":"me","w":"p"}],"E12-04|1":[{"t":"th","m":"相談候補","sk":"search","ck":"探索","ttl":"安全に相談できる相手を探す","w":1,"jd":"c","ok":"{c}なら、安心して相談できそうだ。","du":3,"ex":"相談できる相手は見つからなかった。","cd":["neigh","acq","friend"]}],"E12-06|0":[{"t":"in","m":"発言記録","k":"発言","x":"落ち着いて意見を述べた。","cf":"本人確認","sh":"ppl","w":"p"}],"E12-06|1":[{"t":"in","m":"要望整理","k":"要望","x":"他の人たちの意見を聞き、要望を並べた。","cf":"伝聞","sh":"me"}],"E12-07|0":[{"t":"th","m":"請願準備","sk":"ask","ck":"請願","ttl":"要求の申し入れ","w":4,"jd":"B","ok":"申し入れは受け入れられ、合意を得た。","tg":["local","p"],"du":8,"ng":"申し入れは退けられた。","ex":"返事のないまま、期限が過ぎた。","ef":[["info","合意","求めた件について、申し入れの合意を得た。","本人確認"]],"sx":{"ok":"交渉が実り、求めた件について合意を得た。"}}],"E12-07|1":[{"t":"th","m":"協力者探索","sk":"search","ck":"探索","ttl":"申し入れを支える協力者を探す","w":1,"jd":"c","ok":"{c}が、協力してくれそうだ。（権利はまだ得ていない）","du":3,"ex":"協力者は見つからなかった。","cd":["acq","friend","neigh"]}],"E12-10|0":[{"t":"th","m":"共同申し入れ","sk":"ask","ck":"申入れ","ttl":"共同の申し入れ","w":4,"jd":"B","ok":"共同の申し入れに返答があり、合意を得た。","tg":["local","p"],"du":8,"ng":"申し入れは受け入れられなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["info","合意","共同の申し入れについて、合意を得た。","本人確認"]],"sx":{"ok":"人々の申し入れが聞き入れられ、合意を得た。"}}],"E12-10|1":[{"t":"th","m":"個別相談","sk":"ask","ck":"相談","ttl":"個別の相談","w":1,"jd":"B","ok":"相談に応じてもらえた。","tg":["local","p"],"du":3,"ng":"相談は聞き入れられなかった。","ex":"返事のないまま、期限が過ぎた。"}],"E13-02|0":[{"t":"tm","m":"時間消費"}],"E13-02|1":[{"t":"th","m":"支援要請","sk":"ask","ck":"支援","ttl":"旅人への助けを頼む","w":1,"jd":"B","ok":"助けに来てくれる人がいた。","tg":["neigh","p"],"du":3,"ng":"助けは得られなかった。","ex":"返事のないまま、期限が過ぎた。"}],"E13-04|0":[{"t":"in","m":"案内情報","k":"案内","x":"近くの人に、道順を教えてもらった。","cf":"伝聞","sh":"me","exp":3,"w":"p"}],"E13-04|1":[{"t":"tm","m":"時間消費"}],"E14-04|0":[{"t":"tm","m":"移動時間増"}],"E14-04|1":[{"t":"th","m":"情報待ち","sk":"ask","ck":"経路","ttl":"安全な道の問い合わせ","w":1,"jd":"B","ok":"安全な道を教えてもらえた。","tg":["neigh","p"],"du":3,"ng":"安全な道は教えてもらえなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["info","案内","安全な道を教えてもらった。","伝聞",3]]}],"E14-06|0":[{"t":"th","m":"共同作業予定","sk":"plan","ck":"作業","ttl":"倒木の共同作業","w":1,"jd":"c","ok":"皆で倒木を片づけた。","du":4,"ex":"共同作業の日に参加できなかった。","tm":2}],"E14-06|1":[{"t":"in","m":"通行注意","k":"案内","x":"倒木のある場所を知らせた。","cf":"本人確認","sh":"ppl","exp":3}],"E14-08|0":[{"t":"hd","m":"資源増減（環境の結果に従う）","sys":"資源","why":"環境の結果が記録されていないため、食料の増減は保留した"}],"E01-03|0":[{"t":"hs","m":"住宅の傷み","k":"dmg+"}],"E01-07|0":[{"t":"rp","m":"修繕計画開始"}],"E01-07|1":[{"t":"th","m":"転居計画開始","sk":"search","ck":"転居","ttl":"転居先を探す","w":3,"jd":"c","ok":"","du":6,"ex":"転居先の候補は見つからないまま、いったん区切りとなった。（住まいは変わっていない）","hold":"転居先の候補地データが未設定（京都内の抽象地点）"}],"E03-10|0":[{"t":"th","m":"旅行計画","sk":"plan","ck":"訪問","ttl":"遠方の友人を訪ねる","w":3,"jd":"c","ok":"友人を訪ねて、近況を語り合うことができた。（主な住まいは変わらない）","tg":["p","friend"],"du":7,"ex":"訪ねる機会を作れないまま、時が過ぎた。","tm":2,"ef":[["pay"],["trip"]],"co":{"a":"fund","n":200}}],"E03-10|1":[{"t":"th","m":"通信予定","sk":"plan","ck":"通信","ttl":"遠方の友人へ便りを送る","w":1,"jd":"c","ok":"友人へ便りを送った。（訪ねたわけではない）","tg":["p","friend"],"du":3,"ex":"便りを送れないまま、時が過ぎた。","ef":[["info","約束","友人へ便りを送った。（到着は未確認）","本人確認"]]}],"E05-08|0":[{"t":"th","m":"進学移動計画","sk":"search","ck":"進学","ttl":"学び先を探す","w":3,"jd":"c","ok":"","du":8,"ex":"学び先の受入れ先は見つからないまま、いったん区切りとなった。（住まいは変わっていない）","hold":"学び先・受入れ先の候補データが未設定"}],"E05-08|1":[{"t":"th","m":"地域学習計画","sk":"ask","ck":"相談","ttl":"今いる場所で学ぶ工夫の相談","w":1,"jd":"B","ok":"今いる場所での学び方について、相談がまとまった。（住まいは変わらない）","tg":["mentor","local","p"],"du":3,"ng":"相談はまとまらなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["info","説明","今いる場所での学び方について、相談がまとまった。","伝聞"]]}],"E12-08|0":[{"t":"th","m":"退避計画","sk":"search","ck":"退避","ttl":"安全な退避先を探す","w":1,"jd":"c","ok":"{c}のところなら、身を寄せられそうだ。（まだ移ってはいない）","du":4,"ex":"安全な退避先は見つからなかった。","cd":["fam","neigh","friend","acq"],"ef":[["nx",{"t":"th","m":"受入れ確認","sk":"ask","ck":"退避","ttl":"{c}に受け入れを頼む","w":0,"jd":"B","ok":"{c}が受け入れてくれることになった。（まだ移ってはいない）","tg":"@c","du":3,"ng":"{c}には、受け入れてもらえなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["nx",{"t":"th","m":"実行確認","sk":"conf","ck":"退避","ttl":"{c}のところへ身を寄せる","w":0,"jd":"c","ok":"{c}のところへ身を寄せた。（1か月のあいだ）","du":4,"ng":"今の場所に残ることにした。","ex":"返事をしないまま、期限が過ぎた。","ef":[["pay"],["stay",1]],"co":{"a":"fund","n":100}}]]}]]}],"E12-08|1":[{"t":"th","m":"備えの作業","sk":"work","ck":"備え","ttl":"今いる場所の防備","w":0,"jd":"c","ok":"防備を固めた。備えが増えた。（争いが収まったわけではない）","du":9,"ex":"防備の作業は進まないまま、期限が過ぎた。","tm":3,"ef":[["pay"],["prep+"]],"co":{"a":"goods","n":300},"len":3}],"E13-06|0":[{"t":"cp","m":"同行開始"}],"E13-07|0":[{"t":"th","m":"移住応募","sk":"search","ck":"移住","ttl":"移住先・仕事先を探す","w":3,"jd":"c","ok":"","du":8,"ex":"移住先・仕事先の受入れ先は見つからないまま、いったん区切りとなった。（住まいは変わっていない）","hold":"移住先・仕事先の候補データが未設定"}],"E13-07|1":[{"t":"th","m":"地元仕事探索","sk":"search","ck":"探索","ttl":"今いる場所で仕事を探す","w":1,"jd":"c","ok":"{c}から、仕事の口を聞くことができた。（住まいは変わらない）","du":3,"ex":"仕事の口は見つからなかった。","cd":["work","acq","neigh","friend"]}],"E13-10|0":[{"t":"th","m":"帰郷計画","sk":"search","ck":"帰郷","ttl":"帰郷の受入れ先・経路を調べる","w":3,"jd":"c","ok":"","du":8,"ex":"帰郷の受入れ先は見つからないまま、いったん区切りとなった。（住まいは変わっていない）","hold":"故郷の受入れ先・経路のデータが未設定"}],"E13-10|1":[{"t":"hs","m":"現居住維持","k":"keep"}],"E14-02|0":[{"t":"rs","m":"補修材料","a":"goods","z":"s","sg":-1,"hard":1},{"t":"fc","m":"施設修理候補"}],"E14-02|1":[{"t":"cs","m":"資源配分"}],"E14-07|0":[{"t":"rp","m":"再建計画"}],"E14-07|1":[{"t":"th","m":"転居計画","sk":"search","ck":"転居","ttl":"代わりの住まいを探す","w":3,"jd":"c","ok":"","du":6,"ex":"代わりの住まいの候補は見つからないまま、いったん区切りとなった。（住まいは変わっていない）","hold":"転居先の候補地データが未設定（京都内の抽象地点）"}],"E14-09|0":[{"t":"th","m":"移住検討","sk":"search","ck":"移住","ttl":"安全な移住先を調べる","w":3,"jd":"c","ok":"","du":8,"ex":"安全な移住先は見つからないまま、いったん区切りとなった。（住まいは変わっていない）","hold":"移住先の候補地データが未設定"}],"E14-09|1":[{"t":"th","m":"備えの作業","sk":"work","ck":"備え","ttl":"住まいの災害への備え","w":0,"jd":"c","ok":"備えを整えた。災害を避けられるとは限らない。","du":9,"ex":"備えの作業は進まないまま、期限が過ぎた。","tm":3,"ef":[["pay"],["prep+"]],"co":{"a":"goods","n":300},"len":3}],"E14-10|0":[{"t":"th","m":"復旧参加","sk":"plan","ck":"復旧","ttl":"共同の施設の復旧作業に加わる","w":1,"jd":"c","ok":"復旧の作業に加わった。（共同の施設全体が直ったわけではない）","du":4,"ex":"作業の日に加われなかった。","tm":2,"ef":[["fpart"]]}],"E14-10|1":[{"t":"th","m":"物資支援予定","sk":"plan","ck":"支援","ttl":"復旧のための物資支援","w":1,"jd":"c","ok":"物資を出して、支援に回した。","du":4,"ex":"物資を出せないまま、時が過ぎた。","tm":2,"ef":[["xfer","goods","cstock"]],"co":{"a":"goods"},"amt":"m"}],"E01-05|0":[{"t":"tm","m":"時間消費"}],"E01-05|1":[{"t":"th","m":"分担見直し","sk":"ask","ck":"分担","ttl":"家事の分担についての相談","w":1,"jd":"B","ok":"{n}と話し合い、家事の分担が決まった。","tg":"p","du":3,"ng":"{n}とは、話がまとまらなかった。","ex":"返事のないまま、期限が過ぎた。","hd":{"s":"hd","go":{"chore":"相談中"},"ok":{"chore":"相談済み"},"ng":{"chore":"既存方式"}}}],"E01-10|0":[{"t":"th","m":"世帯調整開始","sk":"ask","ck":"分担","ttl":"生活の分担の組み直し","w":3,"jd":"B","ok":"{n}と話し合い、生活の分担を組み直すことが決まった。","tg":"p","du":8,"ng":"{n}とは、話がまとまらなかった。","ex":"返事のないまま、期限が過ぎた。","hd":{"s":"hd","go":{"chore":"相談中"},"ok":{"chore":"相談済み"},"ng":{"chore":"既存方式"}}}],"E01-10|1":[{"t":"th","m":"住居検討開始","sk":"search","ck":"住み方","ttl":"住み方の候補を調べる","w":3,"jd":"c","ok":"","du":6,"ex":"住み方の候補は見つからないまま、いったん区切りとなった。（住まいは変わっていない）","hold":"住み方の候補データが未設定"}],"E02-05|0":[{"t":"th","m":"養育申請","sk":"ask","ck":"養育","ttl":"身寄りのない子の養育の申し出","w":2,"jd":"B","ok":"周囲の人たちが、養育の申し出を受け入れてくれた。（まだ引き受けてはいない）","tg":"p","du":8,"ng":"養育の申し出は、受け入れられなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["nx",{"t":"th","m":"実行確認","sk":"conf","ck":"養育","ttl":"{n}を迎え入れて養育する","w":0,"jd":"c","ok":"{n}の養育を引き受けた。（実の子になったわけではない）","du":6,"ng":"引き受けは、見送ることにした。","ex":"返事をしないまま、期限が過ぎた。","ef":[["care"]]}]]}],"E02-05|1":[{"t":"th","m":"紹介探索","sk":"search","ck":"探索","ttl":"別の養育先を探す","w":1,"jd":"c","ok":"{c}が、子の世話を引き受けてくれそうだ。（あなたの子にしたわけではない）","du":3,"ex":"別の養育先は見つからなかった。","cd":["local","neigh","acq","friend"]}],"E04-07|0":[{"t":"th","m":"共同生活計画","sk":"ask","ck":"同居","ttl":"共同生活の相談","w":1,"jd":"B","ok":"{n}は、一緒に暮らす話に同意してくれた。（まだ暮らし始めてはいない）","tg":"p","du":4,"ng":"{n}とは、話がまとまらなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["nx",{"t":"th","m":"実行確認","sk":"conf","ck":"同居","ttl":"{n}と同じ家で暮らし始める","w":0,"jd":"c","ok":"{n}と、同じ家で暮らし始めた。","du":6,"ng":"今の距離のまま、過ごすことにした。","ex":"返事をしないまま、期限が過ぎた。","rq":{"dmgmax":2},"ef":[["cohab"]]}]]}],"E04-08|0":[{"t":"th","m":"婚姻協議","sk":"ask","ck":"婚姻","ttl":"結婚についての話し合い","w":2,"jd":"B","ok":"{n}は、結婚について話し合うことに同意してくれた。（成立には、まだ条件の確認が要る）","tg":"p","du":8,"ng":"{n}は、結婚の話を受け入れなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["mar"]],"hd":{"s":"rel","go":{"mar":"協議中","wp":"希望"},"ok":{"op":"承諾"},"ng":{"mar":"未成立","op":"辞退"}}}],"E04-08|1":[{"t":"rl","m":"回答保留","set":{"wp":"保留"}},{"t":"th","m":"回答保留","sk":"conf","ck":"返事","ttl":"結婚の返事を決める","w":0,"jd":"c","ok":"返事を決めた。改めて、話し合いを始める。","tg":"p","du":12,"ng":"返事は、まだ決めないことにした。（保留のまま）","ex":"返事をしないまま、期限が過ぎた。（保留のまま）","ef":[["nx",{"t":"th","m":"婚姻協議","sk":"ask","ck":"婚姻","ttl":"結婚についての話し合い","w":2,"jd":"B","ok":"{n}は、結婚について話し合うことに同意してくれた。（成立には、まだ条件の確認が要る）","tg":"p","du":8,"ng":"{n}は、結婚の話を受け入れなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["mar"]],"hd":{"s":"rel","go":{"mar":"協議中","wp":"希望"},"ok":{"op":"承諾"},"ng":{"mar":"未成立","op":"辞退"}}}]],"hd":{"s":"rel","go":{},"ok":{"wp":"希望"},"ng":{}}}],"E04-10|0":[{"t":"th","m":"修復協議","sk":"ask","ck":"修復","ttl":"関係を直す話し合い","w":1,"jd":"B","ok":"{n}は、関係を直す話し合いに応じてくれた。（修復の合意）","tg":"p","du":4,"ng":"{n}とは、合意に至らなかった。","ex":"返事のないまま、期限が過ぎた。","hd":{"s":"rel","go":{"adj":"修復協議中"},"ok":{"adj":"修復合意"},"ng":{"adj":"無し"}}}],"E04-10|1":[{"t":"rl","m":"別離協議","set":{"love":"交際終了","adj":"別離調整中"}},{"t":"th","m":"別離協議","sk":"ask","ck":"別離","ttl":"別れ方の話し合い","w":1,"jd":"B","ok":"別れ方について、話し合いがまとまった。","tg":"p","du":4,"ng":"別れ方の話し合いは、まとまらなかった。（交際を終える意思は変わっていない）","ex":"返事のないまま、期限が過ぎた。（交際を終える意思は変わっていない）","ef":[["uncohab"]],"hd":{"s":"rel","go":{},"ok":{"adj":"無し"},"ng":{}}}],"E11-10|0":[{"t":"th","m":"受入れ支援","sk":"ask","ck":"受入れ","ttl":"外から来る世帯の受入れ支援","w":3,"jd":"B","ok":"地域での受入れに力を貸すことができた。（迎えた世帯は、あなたの家族ではない）","tg":["local","neigh","p"],"du":8,"ng":"受入れの話は、まとまらなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["guest"]]}],"E11-10|1":[{"t":"in","m":"条件調査","k":"説明","x":"外から来る世帯を迎える条件を調べた。（受入れが決まったわけではない）","cf":"伝聞","sh":"me"}],"E13-08|0":[{"t":"th","m":"別居計画","sk":"plan","ck":"別居","ttl":"家族と別に暮らす準備","w":2,"jd":"c","ok":"別に暮らす準備が整った。（まだ離れてはいない）","tg":"p","du":6,"ex":"準備が整わないまま、時が過ぎた。","tm":1,"ef":[["nx",{"t":"th","m":"実行確認","sk":"conf","ck":"別居","ttl":"{n}と別に暮らし始める","w":0,"jd":"c","ok":"{n}と、別々に暮らし始めた。（家族であることは変わらない）","du":6,"ng":"今のまま、一緒に暮らすことにした。","ex":"返事をしないまま、期限が過ぎた。","ef":[["sep"]]}]]}],"E13-08|1":[{"t":"th","m":"同居維持探索","sk":"search","ck":"探索","ttl":"一緒にいられる道を探す","w":1,"jd":"c","ok":"{c}と話し合い、一緒にいられそうな道が見えてきた。（別居は始めていない）","du":3,"ex":"一緒にいられる道は見つからなかった。","cd":["fam"]}],"E08-01|0":[{"t":"hl","m":"病状の作成","k":"new","kind":"軽い不調","d":-1}],"E08-02|0":[{"t":"th","m":"支援依頼","sk":"ask","ck":"支援","ttl":"家族に看病を頼む","w":1,"jd":"B","ok":"{n}が、看病を引き受けてくれた。","tg":"p","du":3,"ng":"{n}には、頼めなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["helper"]]}],"E08-02|1":[{"t":"th","m":"支援依頼","sk":"ask","ck":"支援","ttl":"近くの人に看病を頼む","w":1,"jd":"B","ok":"{n}が、看病を引き受けてくれた。","tg":["neigh"],"du":3,"ng":"{n}には、頼めなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["helper"]]}],"E08-03|0":[{"t":"hl","m":"病状の作成","k":"new","kind":"作業中のけが","d":-2}],"E08-07|0":[{"t":"hl","m":"療養計画","k":"rest"}],"E08-07|1":[{"t":"th","m":"軽作業調整","sk":"ask","ck":"調整","ttl":"仕事の量を軽くする相談","w":1,"jd":"B","ok":"仕事の量を軽くすることで、話がまとまった。","tg":["work","p"],"du":3,"ng":"仕事を軽くすることは、認められなかった。","ex":"返事のないまま、期限が過ぎた。","ef":[["wl","軽作業"]]}],"E08-08|0":[{"t":"hl","m":"回復の経過","k":"rec","d":1}],"E08-09|0":[{"t":"th","m":"治療相談","sk":"plan","ck":"相談","ttl":"治療についての相談","w":1,"jd":"c","ok":"治療について相談し、方法と費用を確かめた。（治療が始まったわけではない）","du":4,"ex":"相談の時間が取れないまま、時が過ぎた。","tm":1,"ef":[["info","説明","治療について相談し、方法と費用を確かめた。（治療が始まったわけではない）","伝聞"]],"hold":"利用できる治療手段のデータが未設定（相談結果の記録だけ）"}],"E08-09|1":[{"t":"hl","m":"観察予定","k":"watch"},{"t":"th","m":"経過観察","sk":"plan","ck":"観察","ttl":"病状の経過を見守る","w":3,"jd":"c","ok":"経過を見守った。（相談や治療をしたわけではない）","du":6,"ex":"見守る間もなく、時が過ぎた。"}],"E08-10|0":[{"t":"hl","m":"介助計画","k":"care"}],"E08-10|1":[{"t":"th","m":"支援探索","sk":"search","ck":"探索","ttl":"世話を手伝ってくれる人を探す","w":1,"jd":"c","ok":"{c}が、世話を手伝ってくれそうだ。（あなたの介助を始めたわけではない）","du":3,"ex":"手伝ってくれる人は見つからなかった。","cd":["fam","neigh","acq","friend"]}]},"need":{}};
 const ST_ROWS=ST_DATA.rows, ST_NEED=ST_DATA.need;
 const ST_OPEN=['候補探し','候補提示','本人確認待ち','相手返答待ち','実行待ち','作業中','条件不足'];
@@ -2981,6 +2983,148 @@ function saveButtons(){
 }
 window.addEventListener('pagehide',()=>saveAutoNow());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveAutoNow()});
+/* 設計データの形：{v:1, vars:{名前:値}, personas:{境遇キー:{項目:値}}}。変えた所だけ入っていればよい。
+   形の合わない値は使わず、KYOTO_DESIGN.errors に理由を残す（ゲームは既定値のまま動く）。値の範囲の細かい確認は設計ツール側で行う。 */
+const DESIGN_VER=1;
+const dzNum=v=>typeof v==='number'&&isFinite(v);
+const dzArr=(v,n,f=dzNum)=>Array.isArray(v)&&v.length===n&&v.every(f);
+const dzStr=v=>typeof v==='string'&&v.length>0&&v.length<=40;
+const dzObj=(v,ref,f)=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(ref).every(k=>f(v[k]))&&Object.keys(v).every(k=>k in ref);
+const dzSet=(a,v)=>{a.splice(0,a.length,...v)};                       // 配列は同じ入れ物のまま中身を入れ替える
+const dzCopy=v=>JSON.parse(JSON.stringify(v));
+const dzP01=v=>dzNum(v)&&v>=0&&v<=1;
+const dzPair=v=>dzArr(v,2)&&v[0]<=v[1];
+/* 調整できる値：名前 → [読み出し, 書き込み, 形の検査] */
+const DESIGN_VARS={
+  MAXAGE:[()=>MAXAGE,v=>{MAXAGE=v},v=>dzNum(v)&&v>=1&&v<=150],
+  HZ:[()=>HZ,v=>Object.assign(HZ,v),v=>dzObj(v,HZ,x=>dzNum(x)&&x>=0)],
+  FAM_MISS:[()=>FAM_MISS,v=>{FAM_MISS=v},dzP01],
+  FAM_SIB:[()=>FAM_SIB,v=>{FAM_SIB=v.slice()},v=>dzArr(v,3)&&v.every(x=>x>=0)&&Math.abs(v[0]+v[1]+v[2]-100)<1e-9],
+  FAM_ELDER:[()=>FAM_ELDER,v=>{FAM_ELDER=v},dzP01],
+  SWITCH_AGE:[()=>SWITCH_AGE,v=>{SWITCH_AGE=v.map(Math.round)},v=>dzPair(v)&&v[0]>=1&&v[1]<=110],
+  SPEEDS:[()=>SPEEDS.map(s=>s[0]),v=>v.forEach((ms,i)=>{SPEEDS[i][0]=ms}),v=>dzArr(v,SPEEDS.length)&&v.every(x=>x>=200&&x<=600000)],
+  AB_RANGE:[()=>AB_RANGE,v=>dzSet(AB_RANGE,v.map(r=>r.slice())),v=>dzArr(v,4,r=>dzPair(r)&&r[0]>=0&&r[1]<=1000)],
+  STAR_W_BIRTH:[()=>STAR_W_BIRTH,v=>dzSet(STAR_W_BIRTH,v),v=>dzArr(v,5)&&v.every(x=>x>=0)&&v.reduce((a,b)=>a+b,0)>0],
+  STAR_W_ADULT:[()=>STAR_W_ADULT,v=>dzSet(STAR_W_ADULT,v),v=>dzArr(v,5)&&v.every(x=>x>=0)&&v.reduce((a,b)=>a+b,0)>0],
+  STAR_MULT:[()=>STAR_MULT,v=>dzSet(STAR_MULT,v),v=>dzArr(v,5)&&v.every(x=>x>=0)],
+  XP_POL:[()=>XP_POL,v=>{XP_POL=v},v=>dzNum(v)&&v>=0],
+  XP_EV:[()=>XP_EV,v=>{XP_EV=v},v=>dzNum(v)&&v>=0],
+  XP_NPC:[()=>XP_NPC,v=>{XP_NPC=v},v=>dzNum(v)&&v>=0],
+  XP_UP:[()=>XP_UP,v=>dzSet(XP_UP,v),v=>dzArr(v,4)&&v.every(x=>x>0)],
+  XP_DOWN:[()=>XP_DOWN,v=>dzSet(XP_DOWN,v),v=>dzArr(v,5)&&v.every(x=>x>=0)],
+  XP_DECAY_ME:[()=>XP_DECAY_ME,v=>{XP_DECAY_ME=v},v=>dzNum(v)&&v>=0],
+  XP_DECAY_NPC:[()=>XP_DECAY_NPC,v=>{XP_DECAY_NPC=v},v=>dzNum(v)&&v>=0],
+  POLICIES:[()=>POLICIES,v=>{for(const k in v)POLICIES[k]=v[k].slice()},v=>dzObj(v,POLICIES,x=>dzArr(x,4))],
+  EV_BAND:[()=>EV_BAND,v=>{for(const k in v)EV_BAND[k]=v[k].slice()},v=>dzObj(v,EV_BAND,x=>dzPair(x)&&x[0]>=0)],
+  EV_MAP:[()=>EV_MAP,v=>{for(const k in v)Object.assign(EV_MAP[k],v[k])},v=>dzObj(v,EV_MAP,x=>dzObj(x,EV_MAP.a,y=>dzNum(y)&&y>=0))],
+  EV_FOL:[()=>EV_FOL,v=>dzSet(EV_FOL,v),v=>dzPair(v)&&v[0]>=1],
+  EV_NPC_MAX:[()=>EV_NPC_MAX,v=>{EV_NPC_MAX=Math.round(v)},v=>dzNum(v)&&v>=8&&v<=40],
+  EV_CD:[()=>EV_CD,v=>{EV_CD=v},v=>dzNum(v)&&v>=0],
+  EV_D_AFF:[()=>EV_D_AFF,v=>{EV_D_AFF=v},v=>dzNum(v)&&v>=0&&v<=100],
+  EV_P0:[()=>EV_P0,v=>{EV_P0=v},dzP01],
+  ST_FREE:[()=>ST_FREE,v=>{ST_FREE=v},v=>dzNum(v)&&v>=1],
+  ST_INIT:[()=>ST_INIT,v=>Object.assign(ST_INIT,v),v=>dzObj(v,ST_INIT,x=>dzNum(x)&&x>=0)],
+  ST_INC:[()=>ST_INC,v=>{ST_INC=v},v=>dzNum(v)&&v>=0],
+  ST_LIV:[()=>ST_LIV,v=>{ST_LIV=v},v=>dzNum(v)&&v>=0],
+  ST_FIN:[()=>ST_FIN,v=>{ST_FIN=v},v=>dzNum(v)&&v>=0],
+  ST_FOUT:[()=>ST_FOUT,v=>{ST_FOUT=v},v=>dzNum(v)&&v>=0],
+  ST_BMAX:[()=>ST_BMAX,v=>{ST_BMAX=v},v=>dzNum(v)&&v>=0],
+  ST_HNEED2:[()=>ST_HNEED2,v=>Object.assign(ST_HNEED2,v),v=>dzObj(v,ST_HNEED2,x=>dzNum(x)&&x>=1)],
+  RANDW:[()=>RANDW,v=>Object.assign(RANDW,v),v=>dzObj(v,RANDW,x=>dzNum(x)&&x>=0)],
+  NAMEP:[()=>NAMEP,v=>{for(const k in v){if(k==='n')NAMEP.n=v.n.slice();else NAMEP[k]={m:v[k].m.slice(),f:v[k].f.slice()}}},
+    v=>!!v&&typeof v==='object'&&Object.keys(v).every(k=>k==='n'?dzArr(v.n,v.n.length,dzStr)&&v.n.length>0:(k in NAMEP)&&v[k]&&dzArr(v[k].m,v[k].m.length,dzStr)&&dzArr(v[k].f,v[k].f.length,dzStr)&&v[k].m.length>0&&v[k].f.length>0)]
+};
+/* 境遇ごとの項目：名前 → [読み出し, 書き込み, 形の検査]。周りの人は4人のまま（出来事が人物の番号で参照するため、増減はしない） */
+const DESIGN_PF={
+  label:[k=>PERSONAS[k].label,(k,v)=>{PERSONAS[k].label=v},dzStr],
+  name:[k=>PERSONAS[k].name,(k,v)=>{PERSONAS[k].name=v},dzStr],
+  kid:[k=>PERSONAS[k].kid||'',(k,v)=>{PERSONAS[k].kid=v||undefined},v=>v===''||dzStr(v)],
+  place:[k=>PERSONAS[k].place,(k,v)=>{PERSONAS[k].place=v},dzStr],
+  yr:[k=>PERSONAS[k].yr,(k,v)=>{PERSONAS[k].yr=v.map(Math.round)},v=>dzArr(v,2)&&v[0]>=1&&v[0]<v[1]&&v[1]<=2001],
+  ns:[k=>PERSONAS[k].ns,(k,v)=>{PERSONAS[k].ns=v},v=>typeof v==='string'&&v!=='n'&&v in NAMEP],
+  stats:[k=>PERSONAS[k].stats,(k,v)=>{PERSONAS[k].stats=v.slice()},v=>dzArr(v,4)&&v.every(x=>x>=0&&x<=1000)],
+  skillName:[k=>PERSONAS[k].skillName,(k,v)=>{PERSONAS[k].skillName=v},dzStr],
+  randw:[k=>RANDW[k]||0,(k,v)=>{RANDW[k]=v},v=>dzNum(v)&&v>=0],
+  npc:[k=>PERSONAS[k].npc,(k,v)=>{PERSONAS[k].npc=v.map(r=>r.slice())},
+    v=>dzArr(v,4,r=>Array.isArray(r)&&r.length===4&&dzStr(r[0])&&dzStr(r[1])&&dzNum(r[2])&&r[2]>=0&&r[2]<=100&&(r[3]===null||dzNum(r[3])&&r[3]>=0))],
+  famneed:[k=>FAMNEED[k],(k,v)=>{FAMNEED[k]=v.slice()},v=>Array.isArray(v)&&v.length>=1&&v.length<=2&&v.every(x=>x==='母'||x==='父')&&new Set(v).size===v.length],
+  npcoff:[k=>NPCOFF[k],(k,v)=>{NPCOFF[k]=v.slice()},v=>dzArr(v,4)&&v.every(x=>x>=-20&&x<=80)],   // 境遇ごとに別の配列にする（共有を切る）
+  npcsk:[k=>NPCSK[k],(k,v)=>{NPCSK[k]=v.slice()},v=>dzArr(v,4)&&v.every(x=>x>=0&&x<=1000)],
+  npcskn:[k=>NPCSKN[k],(k,v)=>{NPCSKN[k]=v.slice()},v=>dzArr(v,4,dzStr)]
+};
+function designSnapshot(){
+  const vars={},personas={};
+  for(const n in DESIGN_VARS)vars[n]=dzCopy(DESIGN_VARS[n][0]());
+  for(const k in PERSONAS){const o={};for(const f in DESIGN_PF)o[f]=dzCopy(DESIGN_PF[f][0](k));personas[k]=o}
+  return {v:DESIGN_VER,vars,personas};
+}
+function designApply(d){
+  const err=[];let n=0;
+  if(!d||typeof d!=='object'){err.push('設計データの形が違います');return {n,err}}
+  if(d.v!==DESIGN_VER)err.push(`設計データの版が違います（${d.v}）。読める項目だけ使います`);
+  const vars=d.vars&&typeof d.vars==='object'?d.vars:{};
+  for(const name in vars){
+    const h=DESIGN_VARS[name];
+    if(!h){err.push(`知らない項目：${name}`);continue}
+    if(!h[2](vars[name])){err.push(`形が合わないので使いません：${name}`);continue}
+    try{h[1](dzCopy(vars[name]));n++}catch(e){err.push(`${name}：${e.message}`)}
+  }
+  const ps=d.personas&&typeof d.personas==='object'?d.personas:{};
+  for(const k in ps){
+    if(!Object.prototype.hasOwnProperty.call(PERSONAS,k)){err.push(`知らない境遇：${k}`);continue}
+    for(const f in ps[k]){
+      const h=DESIGN_PF[f];
+      if(!h){err.push(`知らない項目：${k}.${f}`);continue}
+      if(!h[2](ps[k][f])){err.push(`形が合わないので使いません：${k}.${f}`);continue}
+      try{h[1](k,dzCopy(ps[k][f]));n++}catch(e){err.push(`${k}.${f}：${e.message}`)}
+    }
+  }
+  return {n,err};
+}
+/* 設計ツールの「まとめて試す」：人生を何回も流して結果をまとめる（設計ツールの見えない試遊画面の中だけで使う。画面の描画は止める） */
+const dzSim={
+  start(n){
+    render=()=>{};openResult=()=>{};showFx=()=>{};evClose=()=>{};syncEvent=()=>{};saveArmed=false;
+    this.n=n;this.i=0;this.r={lives:0,ages:[],causes:{},at30:[0,0,0,0],n30:0,sib:0,miss:0,dec:0,small:0,sw:{},errors:[],ms:0};
+  },
+  step(k){                                    // k 人ぶん進めて、進み具合（0〜1）を返す
+    const t0=performance.now(),r=this.r,pols=Object.keys(POLICIES);
+    for(let c=0;c<k&&this.i<this.n;c++,this.i++){
+      try{
+        const b=randomBirth();newGame(b.pid,b.year);S.policy=pols[rnd(pols.length)];
+        r.sib+=S.npc.filter(x=>/兄|姉|弟|妹/.test(x.role||'')).length;
+        if(S.npc.some(x=>x.role==='祖母'))r.miss++;
+        r.sw[S.switchAge]=(r.sw[S.switchAge]||0)+1;
+        let g=0,got30=false;
+        while(!S.dead&&g++<4000){
+          if(S.decision){const d=S.decision,ok=d.opts.map((o,i)=>stPreWhy(o)?-1:i).filter(i=>i>=0);if(!ok.length)break;
+            if(d.ev&&EV_BY_ID[d.ev]&&EV_BY_ID[d.ev].k==='s')r.small++;else r.dec++;
+            choose(ok[rnd(ok.length)]);continue}
+          if(g%7===0)S.policy=pols[rnd(pols.length)];
+          (S.ths||[]).filter(t=>t.st==='本人確認待ち').forEach(t=>{if(Math.random()<0.6)stConfirm(t.id,Math.random()<0.7)});
+          slots=rollSlots();flushSlots();tick();
+          if(!got30&&S.age>=30&&!S.dead){got30=true;r.n30++;S.stats.forEach((v,i)=>{r.at30[i]+=v})}
+        }
+        r.lives++;r.ages.push(S.age);const cs=String(S.cause||'不明');r.causes[cs]=(r.causes[cs]||0)+1;
+      }catch(e){if(r.errors.length<10)r.errors.push(String(e&&e.message||e))}
+    }
+    r.ms+=performance.now()-t0;
+    return this.i/this.n;
+  },
+  result(){
+    const r=this.r,births={};
+    for(let i=0;i<3000;i++){const b=randomBirth();births[b.pid]=(births[b.pid]||0)+1}
+    return {...r,at30:r.at30.map(v=>r.n30?Math.round(v/r.n30):0),births};
+  }
+};
+window.KYOTO_DESIGN={version:DESIGN_VER,defaults:designSnapshot(),applied:0,errors:[],snapshot:designSnapshot,sim:dzSim,
+  meta:{rels:Object.keys(REL),nameSets:Object.keys(NAMEP).filter(k=>k!=='n'),policies:Object.keys(POLICIES),
+    base:Object.fromEntries(NEWP.map(r=>[r[0],r[1]])),stats:STAT.map(s=>s[0])}};
+if(window.__KYOTO_DESIGN__){
+  const r=designApply(window.__KYOTO_DESIGN__);
+  window.KYOTO_DESIGN.applied=r.n;window.KYOTO_DESIGN.errors=r.err;
+  if(r.err.length)console.warn('設計データ：',r.err);
+}
 /* ---------- タイトル画面 ---------- */
 function titleScreen(){
   const old=$('ttl');if(old)old.remove();

@@ -1,0 +1,622 @@
+<title>京都の暮らし 設計室</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+/* 配置：上に固定の帳場（状態・保存）、その下に見出しタブ。中身は1列の帳面。スマホ縦が基準 */
+:root{
+  --paper:#f4f6f9; --panel:#ffffff; --ink:#1c2433; --muted:#5a6476; --line:#d7dce6; --soft:#e9edf4;
+  --ai:#2d4a8c; --ai-ink:#ffffff; --shu:#c4462b; --shu-soft:#fbe9e4; --ok:#2c7a57; --bad:#b0261c; --bad-soft:#fbe7e5;
+  --f-pix:"DotGothic16","BIZ UDPGothic",system-ui,sans-serif;
+  --f-body:"BIZ UDPGothic","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#11151c; --panel:#191f29; --ink:#e6eaf1; --muted:#9ba4b6; --line:#2d3544; --soft:#222a37;
+  --ai:#8ea7ea; --ai-ink:#0f1522; --shu:#ff8d70; --shu-soft:#3a2420; --ok:#71d0a1; --bad:#ff8e85; --bad-soft:#3b2222; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#11151c; --panel:#191f29; --ink:#e6eaf1; --muted:#9ba4b6; --line:#2d3544; --soft:#222a37;
+  --ai:#8ea7ea; --ai-ink:#0f1522; --shu:#ff8d70; --shu-soft:#3a2420; --ok:#71d0a1; --bad:#ff8e85; --bad-soft:#3b2222; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--paper);color:var(--ink)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.6;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:20;background:var(--panel)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-block:10px 8px}
+h1{font-family:var(--f-pix);font-weight:400;font-size:20px;margin:0;letter-spacing:.04em;line-height:1.2}
+h1 small{display:block;font-family:var(--f-body);font-size:11px;color:var(--muted);letter-spacing:0}
+.status{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto}
+.pill{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.chg{border-color:var(--shu);color:var(--shu)}
+.pill.err{border-color:var(--bad);color:var(--bad)}
+.pill.ok{border-color:var(--ok);color:var(--ok)}
+button{font:inherit;cursor:pointer;border-radius:var(--r);border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 12px;min-height:36px}
+button.pri{background:var(--ai);color:var(--ai-ink);border-color:var(--ai);font-weight:700}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--ai);outline-offset:2px}
+button.link{border:none;background:none;color:var(--ai);padding:2px 4px;min-height:0;text-decoration:underline;font-size:13px}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{border:none;border-bottom:3px solid transparent;border-radius:0;background:none;font-family:var(--f-pix);font-size:15px;padding:6px 12px;white-space:nowrap;color:var(--muted)}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ai)}
+main{padding-block:16px 48px}
+.intro{color:var(--muted);font-size:13px;margin:0 0 14px}
+section.grp{margin:0 0 22px}
+section.grp>h2{font-family:var(--f-pix);font-weight:400;font-size:17px;margin:0 0 4px;letter-spacing:.03em}
+section.grp>p{margin:0 0 10px;color:var(--muted);font-size:13px}
+.fld{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;position:relative}
+.fld.changed{border-left:4px solid var(--shu);padding-left:9px}
+.fld.bad{border-color:var(--bad);background:var(--bad-soft)}
+.fl-head{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.fl-head label,.fl-head .lab{font-weight:700}
+.unit{font-size:12px;color:var(--muted)}
+.help{margin:2px 0 6px;font-size:12.5px;color:var(--muted)}
+.ins{display:flex;flex-wrap:wrap;gap:6px 10px}
+.in{display:flex;flex-direction:column;gap:2px;min-width:0}
+.in span{font-size:11.5px;color:var(--muted)}
+input[type=number],input[type=text],select,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;min-height:36px}
+input[type=number]{width:88px;font-variant-numeric:tabular-nums;text-align:right}
+input.w2{width:64px}
+input[type=text]{width:100%;max-width:320px}
+textarea{width:100%;min-height:76px;resize:vertical;line-height:1.7}
+.fl-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fl-foot .msg{color:var(--bad);font-weight:700}
+.fld:not(.changed) .rst{display:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.note{font-size:13px;color:var(--muted)}
+.banner{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin:0 0 14px;font-size:13px;background:var(--soft)}
+.banner.bad{border-color:var(--bad);background:var(--bad-soft)}
+/* 境遇の一覧 */
+.plist{display:flex;flex-direction:column;gap:6px}
+.prow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;text-align:left;padding:10px 12px;width:100%}
+.prow b{font-weight:700}
+.prow .sub{grid-column:1/-1;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.prow .pct{font-family:var(--f-pix);font-size:16px;font-variant-numeric:tabular-nums}
+.prow.changed{border-left:4px solid var(--shu)}
+.era{font-size:12px;color:var(--muted);margin:12px 0 4px;letter-spacing:.08em}
+.npcgrid{display:grid;gap:8px}
+.npc{border:1px dashed var(--line);border-radius:var(--r);padding:8px}
+.npc h4{margin:0 0 6px;font-size:13px}
+/* 変更一覧 */
+.diff{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.diff .what{min-width:0}
+.diff .what small{display:block;color:var(--muted);font-size:12px;word-break:break-all}
+.diff .vals{font-variant-numeric:tabular-nums;font-size:13px;word-break:break-all}
+.diff .vals s{color:var(--muted)}
+.diff .vals b{color:var(--shu)}
+/* 試遊 */
+.play{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:#000;max-width:430px;margin:0 auto}
+.play iframe{display:block;width:100%;height:min(780px,78vh);border:0;background:var(--panel)}
+.prog{height:8px;background:var(--soft);border-radius:99px;overflow:hidden;margin:8px 0}
+.prog i{display:block;height:100%;width:0;background:var(--ai);transition:width .2s}
+.res{display:grid;gap:10px}
+.kv{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px 12px;font-variant-numeric:tabular-nums;font-size:13.5px}
+.kv .h{color:var(--muted);font-size:12px}
+.hist{display:grid;gap:3px;font-size:12px;font-variant-numeric:tabular-nums}
+.hrow{display:grid;grid-template-columns:44px 1fr 44px;gap:6px;align-items:center}
+.hbar{position:relative;height:16px;background:var(--soft);border-radius:3px}
+.hbar i{position:absolute;left:0;top:0;bottom:0;border-radius:3px}
+.hbar i.d{background:var(--line)}
+.hbar i.n{background:var(--ai);height:8px;top:4px}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.later{margin-top:28px;padding-top:14px;border-top:1px dashed var(--line)}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:99px;font-size:13px;z-index:30;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion: reduce){.prog i{transition:none}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="bar">
+      <h1>京都の暮らし 設計室<small>「2000年の地球上の誰か1人。」京都版のゲームデザイン</small></h1>
+      <div class="status" aria-live="polite">
+        <span class="pill" id="st-chg">変更 0件</span>
+        <span class="pill" id="st-save">読み込み中</span>
+        <button class="pri" id="btn-save" disabled>保存</button>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="設計の項目">
+      <button role="tab" data-tab="num" aria-selected="true">数値</button>
+      <button role="tab" data-tab="per" aria-selected="false">境遇と人物</button>
+      <button role="tab" data-tab="name" aria-selected="false">名前</button>
+      <button role="tab" data-tab="diff" aria-selected="false">変更一覧</button>
+      <button role="tab" data-tab="play" aria-selected="false">試遊</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <p class="intro">ゲームの中身を読み込んでいます…（数秒かかります）</p>
+</main>
+<iframe id="simframe" title="計算用（非表示）" hidden></iframe>
+
+<script>
+/* ===== 設計室：ゲーム本体（game.html）の既定値を読み、変えた所だけを「設計データ」として保存する =====
+   保存先：このページのデータベース design/current（Claude が読んで本体へ反映する）。使えないときは、この端末の下書きだけ。 */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone=v=>JSON.parse(JSON.stringify(v));
+const r12=v=>Number(Number(v).toPrecision(12));
+const eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+const DRAFT_KEY='kyoto-designer-draft-v1';
+const GAME_KEY_PREFIX='kyoto-kurashi-mihon-v4';
+let GAME=null,DEF=null,META=null,cur=null,dbRef=null,dbOk=false,saved=null,errs={},tab='num',perSel=null,lastApplied=null,appliedInfo={},simBusy=false;
+
+/* ---------- 項目の定義（数値タブ） ----------
+   path：値の場所（vars の名前から）。shape：n＝数1つ／a＝数の並び／p＝最小・最大の組／pp＝組の並び／o＝名前つきの数
+   scale：画面の表示＝内部の値×scale。min/max は画面の表示の単位 */
+const KIND={a:'自動の出来事',s:'小さな選択',b:'大きな選択'};
+function numSchema(){
+  const st=META.stats, pol=META.policies;
+  return [
+  {id:'life',title:'寿命と死亡',intro:'毎年、亡くなる確率＝「高齢の分×体力の補正×病気の倍率」＋「乳幼児の分」＋「事故」。境遇による直接の補正はありません。',fields:[
+    {path:['MAXAGE'],shape:'n',label:'寿命の上限',unit:'歳',min:50,max:150,int:true,help:'この年齢になると必ず人生が終わります（強制の上限）。'},
+    {path:['HZ','B'],shape:'n',label:'高齢による死亡の起点',unit:'10万分の1',scale:1e5,min:0,max:100,step:0.1,help:'0歳時点の「高齢の分」の大きさ。大きいほど全体に早く亡くなります。'},
+    {path:['HZ','k'],shape:'n',label:'年齢による増え方',min:0,max:0.3,step:0.005,help:'1歳ごとに「高齢の分」が約 e^値 倍になります（0.09なら1年で約1.09倍、10年で約2.5倍）。'},
+    {path:['HZ','child'],shape:'n',label:'0歳の死亡率のもと',unit:'%',scale:100,min:0,max:50,step:0.1,help:'乳幼児の分の0歳での大きさ。'},
+    {path:['HZ','childDecay'],shape:'n',label:'乳幼児の死亡率の下がり方',min:0,max:5,step:0.05,help:'大きいほど、1歳・2歳…と急に下がります。'},
+    {path:['HZ','acc'],shape:'n',label:'事故で亡くなる確率',unit:'%（1年あたり）',scale:100,min:0,max:5,step:0.01},
+    {path:['HZ','illMult'],shape:'n',label:'病気（風邪）の間の倍率',unit:'倍',min:1,max:20,step:0.1},
+    {path:['HZ','sevMult'],shape:'n',label:'重い病の間の倍率',unit:'倍',min:1,max:50,step:0.1}]},
+  {id:'fam',title:'家族と時間の進み方',intro:'誕生時の家族の決まり方と、時間の進む単位・速さ。',fields:[
+    {path:['FAM_MISS'],shape:'n',label:'養育者の片方が欠ける確率',unit:'%',scale:100,min:0,max:100,step:1,help:'欠けた場合は祖母が加わります。'},
+    {path:['FAM_SIB'],shape:'a',sub:['0人','1人','2人'],label:'兄弟姉妹の人数の割合',unit:'%（合計100）',min:0,max:100,step:1,sum:100},
+    {path:['FAM_ELDER'],shape:'n',label:'兄・姉として生まれる割合',unit:'%',scale:100,min:0,max:100,step:1,help:'残りは、後から生まれる弟・妹になります。'},
+    {path:['SWITCH_AGE'],shape:'p',sub:['から','まで'],label:'1年ごとの進行に切り替わる年齢',unit:'歳',min:1,max:110,int:true,help:'それまでは四半期（春夏秋冬）ごとに進みます。誕生時にこの範囲から1つ選ばれます。'},
+    {path:['SPEEDS'],shape:'a',sub:['×1','×2','×4','×30'],label:'1回（四半期または1年）にかかる時間',unit:'秒',scale:0.001,min:0.2,max:600,step:0.1,help:'演出の待ち時間だけが変わり、結果は変わりません。'}]},
+  {id:'birth',title:'生まれつきの能力と★',intro:'能力は0〜1000。★（1〜5）は、学びや仕事などの活動で伸びるときの伸びやすさです。',fields:[
+    {path:['AB_RANGE'],shape:'pp',rows:st,sub:['最小','最大'],label:'生まれた時の能力の範囲',min:0,max:1000,int:true,help:'3つの乱数の平均で引くので、真ん中付近が出やすくなります。生まれつきの差は、成長後の水準（境遇の「能力の目安」）にも2倍で残ります。'},
+    {path:['STAR_W_BIRTH'],shape:'a',sub:['★1','★2','★3','★4','★5'],label:'★の出やすさ（生まれた人）',unit:'割合',min:0,max:1000,step:1,help:'数の比で決まります（合計は100でなくてもかまいません）。'},
+    {path:['STAR_W_ADULT'],shape:'a',sub:['★1','★2','★3','★4','★5'],label:'★の出やすさ（13歳以上で現れた人物）',unit:'割合',min:0,max:1000,step:1}]},
+  {id:'grow',title:'成長と★の上下',intro:'活動の積み重ね（経験）が溜まると★が上がり、使わない年が続くと下がります。',fields:[
+    {path:['STAR_MULT'],shape:'a',sub:['★1','★2','★3','★4','★5'],label:'★ごとの成長の倍率',unit:'倍',min:0,max:10,step:0.05,help:'活動による成長（プラスの分）だけに掛かります。年齢による成長・回復には掛かりません。'},
+    {path:['XP_UP'],shape:'a',sub:['★1→2','★2→3','★3→4','★4→5'],label:'★が上がるのに必要な経験',min:1,max:5000,step:1},
+    {path:['XP_DOWN'],shape:'a',idx:[1,2,3,4],sub:['★2→1','★3→2','★4→3','★5→4'],label:'★が下がる目減りの量',min:0,max:5000,step:1,help:'経験がこの分だけマイナスになると★が1つ下がります。'},
+    {path:['XP_POL'],shape:'n',label:'生活方針の経験',unit:'1ポイント・1年あたり',min:0,max:50,step:0.1},
+    {path:['XP_EV'],shape:'n',label:'出来事の経験',unit:'成長量1あたり',min:0,max:10,step:0.01},
+    {path:['XP_NPC'],shape:'n',label:'周りの人の活動の経験',unit:'1回あたり',min:0,max:50,step:0.1},
+    {path:['XP_DECAY_ME'],shape:'n',label:'使わない年の目減り（主人公）',unit:'1年あたり、13歳から',min:0,max:50,step:0.1},
+    {path:['XP_DECAY_NPC'],shape:'n',label:'使わない年の目減り（周りの人）',unit:'1年あたり、13歳から',min:0,max:50,step:0.1}]},
+  {id:'pol',title:'生活方針',intro:'6歳から選べる方針ごとの、能力の伸び。1年ではおよそ値×4、四半期では×1.5になります。マイナスは下がります。',fields:
+    pol.map(p=>({path:['POLICIES',p],shape:'a',sub:st,label:`「${p}」`,min:-20,max:20,step:0.5}))},
+  {id:'ev',title:'出来事',intro:'イベントの「強さ1〜3」を能力の変化量に換え、区分ごとの範囲に収めます。',fields:[
+    ...['a','s','b'].map(k=>({path:['EV_MAP',k],shape:'o',keys:['1','2','3'],sub:['強さ1','強さ2','強さ3'],label:`${KIND[k]}の変化量`,min:0,max:100,step:1})),
+    ...['a','s','b'].map(k=>({path:['EV_BAND',k],shape:'p',sub:['最小','最大'],label:`${KIND[k]}の変化量の範囲`,min:0,max:100,step:1})),
+    {path:['EV_FOL'],shape:'p',sub:['最小','最大'],label:'後日談（うまくいったとき）の変化量',min:1,max:100,step:1},
+    {path:['EV_P0'],shape:'n',label:'判定のある後日談の基本の成功率',unit:'%',scale:100,min:0,max:100,step:1},
+    {path:['EV_D_AFF'],shape:'n',label:'返事待ちの後日談が進む好感度',min:0,max:100,step:1,help:'相手の好感度がこの値以上になると返事が届きます。'},
+    {path:['EV_CD'],shape:'n',label:'同じ出来事が再び起きるまでの最短',unit:'年',min:0,max:50,step:0.05},
+    {path:['EV_NPC_MAX'],shape:'n',label:'人物の数の上限',unit:'人',min:8,max:40,int:true}]},
+  {id:'hh',title:'家計と自由時間（毎月）',intro:'暮らしの資源は抽象的な単位です（成人1人分の目安）。',fields:[
+    {path:['ST_INIT'],shape:'o',keys:['fund','food','goods'],sub:['資金','食料','物資'],label:'世帯の最初の量',min:0,max:1000,step:1},
+    {path:['ST_INC'],shape:'n',label:'毎月の収入（資金）',min:0,max:1000,step:1},
+    {path:['ST_LIV'],shape:'n',label:'毎月の生活費（資金）',min:0,max:1000,step:1},
+    {path:['ST_FIN'],shape:'n',label:'毎月の食料の補給',min:0,max:1000,step:1,help:'生活費を払えた割合で減ります。'},
+    {path:['ST_FOUT'],shape:'n',label:'毎月の食料の消費',min:0,max:1000,step:1},
+    {path:['ST_BMAX'],shape:'n',label:'収入の上乗せの上限',min:0,max:100,step:1},
+    {path:['ST_FREE'],shape:'n',label:'毎月の自由時間',min:1,max:100,step:1},
+    {path:['ST_HNEED2'],shape:'o',keys:['軽い不調','作業中のけが','長引く不調'],sub:['軽い不調','作業中のけが','長引く不調'],label:'回復に必要な期間',unit:'か月',scale:0.5,min:0.5,max:60,step:0.5,rawInt:'0.5か月きざみで入れてください'}]}
+  ];
+}
+/* ---------- 境遇の項目 ---------- */
+const PF=[
+  {f:'label',label:'境遇の名前',kind:'text'},
+  {f:'place',label:'生まれた所',kind:'text'},
+  {f:'kid',label:'子どもの頃の呼び名',kind:'text',opt:true,help:'空欄なら「子」。名前がつく前の呼び方です。'},
+  {f:'name',label:'若い頃の呼び名',kind:'text'},
+  {f:'yr',label:'生まれ年の範囲',kind:'pair',sub:['から（年）','まで（この年は含まない）'],min:1,max:2001,int:true},
+  {f:'randw',label:'ランダムで選ばれる重み',kind:'num',min:0,max:1000,step:1,help:'同じ年に生まれうる境遇どうしの比です。0なら「選ぶ」でしか生まれません。'},
+  {f:'ns',label:'名前の時代',kind:'ns'},
+  {f:'stats',label:'能力の目安（成長後の水準）',kind:'arr',subStats:true,min:0,max:1000,int:true},
+  {f:'skillName',label:'技能の名前',kind:'text'},
+  {f:'famneed',label:'必ずいる親',kind:'fam'}
+];
+const NS_LABEL={noble:'貴族（平安）',heian:'平安',muro:'室町',edo:'江戸',showa:'昭和',mod:'1970年代〜',n:'男女どちらでも'};
+
+/* ---------- 値の出し入れ ---------- */
+const getP=(o,p)=>p.reduce((a,k)=>a==null?a:a[k],o);
+function setP(o,p,v){let a=o;for(let i=0;i<p.length-1;i++)a=a[p[i]];a[p[p.length-1]]=v}
+const toDisp=(raw,f)=>raw==null?'':r12(raw*(f.scale||1));
+const toRaw=(d,f)=>r12(d/(f.scale||1));
+/* 1つの項目の入力欄の並び：[{sub, raw}]（表示の単位で） */
+function cells(f,obj){
+  const v=getP(obj,f.path);
+  if(f.shape==='n')return [{sub:'',raw:v,i:null}];
+  if(f.shape==='a')return (f.idx||v.map((_,i)=>i)).map((i,j)=>({sub:f.sub[j],raw:v[i],i}));
+  if(f.shape==='p')return v.map((x,i)=>({sub:f.sub[i],raw:x,i}));
+  if(f.shape==='o')return f.keys.map((k,j)=>({sub:f.sub[j],raw:v[k],i:k}));
+  if(f.shape==='pp')return v.flatMap((pr,r)=>pr.map((x,i)=>({sub:`${f.rows[r]}・${f.sub[i]}`,raw:x,i:[r,i]})));
+}
+function putCell(f,i,raw){
+  const v=clone(getP(cur.vars,f.path));
+  if(f.shape==='n'){setP(cur.vars,f.path,raw);return}
+  if(f.shape==='pp')v[i[0]][i[1]]=raw;else v[i]=raw;
+  setP(cur.vars,f.path,v);
+}
+function checkNum(f,raw){
+  const d=toDisp(raw,f);
+  if(!Number.isFinite(raw))return '数字を入れてください';
+  if(f.int&&!Number.isInteger(d))return '整数で入れてください';
+  if(f.rawInt&&!Number.isInteger(raw))return f.rawInt;
+  if(f.min!=null&&d<f.min)return `${f.min}以上にしてください`;
+  if(f.max!=null&&d>f.max)return `${f.max}以下にしてください`;
+  return '';
+}
+function checkField(f){
+  for(const c of cells(f,cur.vars)){const m=checkNum(f,c.raw);if(m)return `${c.sub?c.sub+'：':''}${m}`}
+  const v=getP(cur.vars,f.path);
+  if(f.sum!=null&&Math.abs(v.reduce((a,b)=>a+b,0)-f.sum)>1e-9)return `合計を${f.sum}にしてください（今は${r12(v.reduce((a,b)=>a+b,0))}）`;
+  if(f.shape==='p'&&v[0]>v[1])return '「最小（から）」を「最大（まで）」以下にしてください';
+  if(f.shape==='pp'){const r=v.findIndex(pr=>pr[0]>pr[1]);if(r>=0)return `${f.rows[r]}：最小を最大以下にしてください`}
+  if(f.path[0].startsWith('STAR_W')&&v.reduce((a,b)=>a+b,0)<=0)return 'どれか1つは0より大きくしてください';
+  return '';
+}
+
+/* ---------- 差分（＝設計データ） ---------- */
+function design(){
+  const d={v:DEF.v,vars:{},personas:{}};
+  for(const k in cur.vars)if(!eq(cur.vars[k],DEF.vars[k]))d.vars[k]=clone(cur.vars[k]);
+  for(const p in cur.personas)for(const f in cur.personas[p])if(!eq(cur.personas[p][f],DEF.personas[p][f])){(d.personas[p]=d.personas[p]||{})[f]=clone(cur.personas[p][f])}
+  if(!Object.keys(d.personas).length)delete d.personas;
+  return d;
+}
+function diffList(){
+  const out=[],sch=numSchema();
+  for(const g of sch)for(const f of g.fields){const a=getP(DEF.vars,f.path),b=getP(cur.vars,f.path);if(!eq(a,b))out.push({grp:g.title,label:f.label,a:fmtVal(f,a),b:fmtVal(f,b),undo:()=>{setP(cur.vars,f.path,clone(a))}})}
+  if(!eq(cur.vars.NAMEP,DEF.vars.NAMEP))for(const s in DEF.vars.NAMEP){const a=DEF.vars.NAMEP[s],b=cur.vars.NAMEP[s];if(!eq(a,b))out.push({grp:'名前',label:NS_LABEL[s]||s,a:nameCount(a),b:nameCount(b),undo:()=>{cur.vars.NAMEP[s]=clone(a)}})}
+  for(const p of pOrder())for(const f in cur.personas[p]){const a=DEF.personas[p][f],b=cur.personas[p][f];if(!eq(a,b))out.push({grp:'境遇：'+DEF.personas[p].label,label:pfLabel(f),a:fmtPV(f,a),b:fmtPV(f,b),undo:()=>{cur.personas[p][f]=clone(a)}})}
+  return out;
+}
+const nameCount=v=>Array.isArray(v)?`${v.length}個`:`男${v.m.length}・女${v.f.length}個`;
+function fmtVal(f,v){return cells(f,{x:0,...Object.fromEntries([[f.path[0],f.path.length>1?{[f.path[1]]:v}:v]])}).map(c=>(c.sub?c.sub+' ':'')+toDisp(c.raw,f)).join('、')}
+const pfLabel=f=>({npc:'周りの人',npcoff:'周りの人の年齢差',npcsk:'周りの人の技能',npcskn:'周りの人の技能名'}[f]||(PF.find(x=>x.f===f)||{}).label||f);
+function fmtPV(f,v){
+  if(f==='npc')return v.map(r=>`${r[0]}（${r[1]}・好感${r[2]}・${r[3]==null?'出来事で':r[3]+'歳'}）`).join('／');
+  if(f==='famneed')return v.join('と');
+  if(f==='ns')return NS_LABEL[v]||v;
+  if(Array.isArray(v))return v.join('、');
+  return v===''?'（空欄）':String(v);
+}
+const changedCount=()=>diffList().length;
+
+/* ---------- 境遇 ---------- */
+const pOrder=()=>Object.keys(cur.personas).sort((a,b)=>cur.personas[a].yr[0]-cur.personas[b].yr[0]||a.localeCompare(b));
+function birthProbs(){            // ゲームの randomBirth と同じ：西暦1〜1900年が一様、その年に生まれうる境遇の重みで選ぶ
+  const ks=Object.keys(cur.personas),p=Object.fromEntries(ks.map(k=>[k,0]));const holes=[];let hs=null;
+  for(let y=1;y<=1900;y++){
+    const c=ks.filter(k=>y>=cur.personas[k].yr[0]&&y<cur.personas[k].yr[1]&&cur.personas[k].randw>0);
+    const t=c.reduce((a,k)=>a+cur.personas[k].randw,0);
+    if(!c.length||t<=0){if(hs==null)hs=y}else{if(hs!=null){holes.push([hs,y-1]);hs=null}c.forEach(k=>p[k]+=cur.personas[k].randw/t)}
+  }
+  if(hs!=null)holes.push([hs,1900]);
+  for(const k in p)p[k]=p[k]/1900*100;
+  return {p,holes};
+}
+function checkPersona(k,f){
+  const v=cur.personas[k][f],d=PF.find(x=>x.f===f);
+  if(['label','place','name','skillName'].includes(f))return (typeof v==='string'&&v.trim()&&v.length<=40)?'':'1〜40文字で入れてください';
+  if(f==='kid')return v.length<=40?'':'40文字以内にしてください';
+  if(f==='yr'){if(!v.every(Number.isInteger))return '整数で入れてください';if(v[0]<1)return '1年以上にしてください';if(v[1]>2001)return '「まで」は2001以下にしてください';if(v[0]>=v[1])return '「から」を「まで」より小さくしてください';return ''}
+  if(f==='randw')return Number.isFinite(v)&&v>=0&&v<=1000?'':'0〜1000の数にしてください';
+  if(f==='stats')return v.every(x=>Number.isInteger(x)&&x>=0&&x<=1000)?'':'0〜1000の整数にしてください';
+  if(f==='npc'){for(const r of v){if(!r[0].trim()||r[0].length>40)return '役割名を1〜40文字で';if(!(Number.isInteger(r[2])&&r[2]>=0&&r[2]<=100))return '好感度は0〜100の整数で';if(r[3]!=null&&!(Number.isInteger(r[3])&&r[3]>=0&&r[3]<=110))return '知り合う年齢は0〜110の整数か空欄で'}return ''}
+  if(f==='npcoff')return v.every(x=>Number.isInteger(x)&&x>=-20&&x<=80)?'':'年齢差は−20〜80の整数で';
+  if(f==='npcsk')return v.every(x=>Number.isInteger(x)&&x>=0&&x<=1000)?'':'技能は0〜1000の整数で';
+  if(f==='npcskn')return v.every(x=>typeof x==='string'&&x.trim()&&x.length<=40)?'':'技能名を1〜40文字で';
+  return '';
+}
+
+/* ---------- 全体の誤り ---------- */
+function allErrors(){
+  const out=[];
+  for(const g of numSchema())for(const f of g.fields){const m=checkField(f);if(m)out.push(`${f.label}：${m}`)}
+  for(const k in cur.personas)for(const f in cur.personas[k]){const m=checkPersona(k,f);if(m)out.push(`${cur.personas[k].label||k}・${pfLabel(f)}：${m}`)}
+  for(const s in cur.vars.NAMEP){const v=cur.vars.NAMEP[s];const lists=Array.isArray(v)?[v]:[v.m,v.f];if(lists.some(l=>!l.length))out.push(`名前（${NS_LABEL[s]||s}）：1つ以上入れてください`);if(lists.some(l=>l.some(n=>n.length>40)))out.push(`名前（${NS_LABEL[s]||s}）：1つの名前は40文字以内に`)}
+  const {holes}=birthProbs();
+  holes.forEach(h=>out.push(`ランダム出生：${h[0]}〜${h[1]}年に生まれられる境遇がありません（重みが0より大きい境遇の生まれ年を広げてください）`));
+  for(const k in errs)if(errs[k])out.push(errs[k]);
+  return out;
+}
+
+/* ---------- 画面の更新 ---------- */
+function refreshStatus(){
+  const n=changedCount(),e=allErrors(),dirty=!eq(design(),saved);
+  const c=$('#st-chg');c.textContent=`変更 ${n}件`;c.className='pill'+(n?' chg':'');
+  const s=$('#st-save');
+  if(e.length){s.textContent=`誤り ${e.length}件`;s.className='pill err'}
+  else if(dirty){s.textContent=dbOk?'未保存':'未保存（この端末）';s.className='pill chg'}
+  else{s.textContent=dbOk?'保存済み':'下書きのみ';s.className='pill ok'}
+  $('#btn-save').disabled=!dbOk||!!e.length||!dirty;
+  try{localStorage.setItem(DRAFT_KEY,JSON.stringify({at:Date.now(),dirty,data:design()}))}catch(x){}
+}
+let toastT=null;
+function toast(m){let t=$('.toast');if(!t){t=document.createElement('div');t.className='toast';t.setAttribute('role','status');document.body.appendChild(t)}t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},2600)}
+
+function fieldHTML(f,fid){
+  const cs=cells(f,cur.vars),dv=cells(f,DEF.vars);
+  const changed=!eq(getP(cur.vars,f.path),getP(DEF.vars,f.path));
+  const m=checkField(f);
+  return `<div class="fld${changed?' changed':''}${m?' bad':''}" id="${fid}">
+    <div class="fl-head"><span class="lab">${esc(f.label)}</span>${f.unit?`<span class="unit">${esc(f.unit)}</span>`:''}</div>
+    ${f.help?`<p class="help">${esc(f.help)}</p>`:''}
+    <div class="ins">${cs.map((c,j)=>`<label class="in">${c.sub?`<span>${esc(c.sub)}</span>`:''}<input type="number" inputmode="decimal" id="${fid}-${j}" data-fid="${fid}" data-j="${j}" value="${toDisp(c.raw,f)}" step="${f.step||(f.int?1:'any')}" ${f.min!=null?`min="${f.min}"`:''} ${f.max!=null?`max="${f.max}"`:''} aria-label="${esc(f.label+(c.sub?' '+c.sub:''))}"></label>`).join('')}</div>
+    <div class="fl-foot"><span>既定：${dv.map(c=>(c.sub&&cs.length>1?c.sub+' ':'')+toDisp(c.raw,f)).join('、')}</span><button class="link rst" data-rst="${fid}">既定に戻す</button><span class="msg" role="alert">${esc(m)}</span></div>
+  </div>`;
+}
+let FIELD_BY_ID={};
+function renderNum(){
+  FIELD_BY_ID={};
+  const sch=numSchema();
+  $('#main').innerHTML=`<p class="intro">ゲーム全体に効く数値です。左端に朱色の線がある項目は、既定から変えたものです。変えたら「試遊」で確かめられます。</p>`+
+    sch.map(g=>`<section class="grp" id="g-${g.id}"><h2>${esc(g.title)}</h2><p>${esc(g.intro)}</p>${g.fields.map((f,i)=>{const fid=`f-${g.id}-${i}`;FIELD_BY_ID[fid]=f;return fieldHTML(f,fid)}).join('')}</section>`).join('')+laterHTML();
+}
+function onNumInput(e){
+  const el=e.target;const fid=el.dataset.fid;const f=FIELD_BY_ID[fid];if(!f)return;
+  const j=+el.dataset.j;const c=cells(f,cur.vars)[j];
+  const d=el.value===''?NaN:Number(el.value);
+  const key=fid+'-'+j;
+  if(!Number.isFinite(d)){errs[key]=`${f.label}${c.sub?'（'+c.sub+'）':''}：数字を入れてください`}
+  else{delete errs[key];putCell(f,c.i,toRaw(d,f))}
+  updateField(fid);refreshStatus();
+}
+function updateField(fid){
+  const f=FIELD_BY_ID[fid],box=document.getElementById(fid);if(!box)return;
+  const changed=!eq(getP(cur.vars,f.path),getP(DEF.vars,f.path));
+  let m=checkField(f);const own=Object.keys(errs).filter(k=>k.startsWith(fid+'-'));if(own.length)m='数字を入れてください';
+  box.classList.toggle('changed',changed);box.classList.toggle('bad',!!m);box.querySelector('.msg').textContent=m;
+}
+
+/* ---------- 境遇タブ ---------- */
+function renderPer(){
+  if(perSel)return renderPerEdit(perSel);
+  const {p,holes}=birthProbs();let lastEra=null;
+  const eraOf=y=>y<1185?'平安とそれ以前':y<1603?'中世（鎌倉・室町）':y<1901?'江戸・明治':'昭和以降（ランダムでは生まれない）';
+  $('#main').innerHTML=`<p class="intro">17の境遇の名前・生まれ年・能力・周りの人を変えられます。右の数字は、ランダムで生まれたときにその境遇になる確率です（西暦1〜1900年から生まれ年を選ぶ）。</p>
+    ${holes.length?`<div class="banner bad">${holes.map(h=>`${h[0]}〜${h[1]}年に生まれられる境遇がありません。`).join('')}</div>`:''}
+    <div class="plist">${pOrder().map(k=>{const P=cur.personas[k];const e=eraOf(P.yr[0]);const head=e!==lastEra?`<div class="era">${esc(e)}</div>`:'';lastEra=e;
+      const ch=Object.keys(P).some(f=>!eq(P[f],DEF.personas[k][f]));
+      return `${head}<button class="prow${ch?' changed':''}" data-per="${k}"><b>${esc(P.label)}</b><span class="pct">${p[k].toFixed(1)}%</span><span class="sub">${P.yr[0]}〜${P.yr[1]-1}年・${esc(P.place)}・重み ${P.randw}${META.base[k]?`・文章と絵は「${esc(DEF.personas[META.base[k]].label)}」と共通`:''}</span></button>`}).join('')}</div>`+laterHTML();
+}
+function pInput(k,f,d){
+  const v=cur.personas[k][f];const id=`p-${k}-${f}`;
+  if(d.kind==='text')return `<input type="text" id="${id}" data-pk="${k}" data-pf="${f}" value="${esc(v)}" maxlength="40" ${d.opt?'placeholder="（空欄）"':''}>`;
+  if(d.kind==='num')return `<input type="number" inputmode="decimal" id="${id}" data-pk="${k}" data-pf="${f}" value="${v}" step="${d.step||1}" min="${d.min}" max="${d.max}">`;
+  if(d.kind==='pair')return `<div class="ins">${v.map((x,i)=>`<label class="in"><span>${esc(d.sub[i])}</span><input type="number" inputmode="numeric" id="${id}-${i}" data-pk="${k}" data-pf="${f}" data-i="${i}" value="${x}" step="1"></label>`).join('')}</div>`;
+  if(d.kind==='arr')return `<div class="ins">${v.map((x,i)=>`<label class="in"><span>${esc(META.stats[i])}</span><input type="number" inputmode="numeric" class="w2" id="${id}-${i}" data-pk="${k}" data-pf="${f}" data-i="${i}" value="${x}" step="10"></label>`).join('')}</div>`;
+  if(d.kind==='ns')return `<select id="${id}" data-pk="${k}" data-pf="${f}">${META.nameSets.map(s=>`<option value="${s}"${s===v?' selected':''}>${esc(NS_LABEL[s]||s)}</option>`).join('')}</select>`;
+  if(d.kind==='fam'){const cur2=v.join('');return `<select id="${id}" data-pk="${k}" data-pf="${f}">${[['母','母'],['父','父'],['母父','母と父']].map(([val,l])=>`<option value="${val}"${val===cur2||(val==='母父'&&cur2==='父母')?' selected':''}>${l}</option>`).join('')}</select>`}
+}
+function renderPerEdit(k){
+  const P=cur.personas[k],D=DEF.personas[k];const {p}=birthProbs();
+  const row=(d)=>{const ch=!eq(P[d.f],D[d.f]),m=checkPersona(k,d.f);
+    return `<div class="fld${ch?' changed':''}${m?' bad':''}" id="pf-${d.f}"><div class="fl-head"><label for="p-${k}-${d.f}">${esc(d.label)}</label></div>${d.help?`<p class="help">${esc(d.help)}</p>`:''}${pInput(k,d.f,d)}
+      <div class="fl-foot"><span>既定：${esc(fmtPV(d.f,D[d.f]))}</span><button class="link rst" data-prst="${d.f}">既定に戻す</button><span class="msg" role="alert">${esc(m)}</span></div></div>`};
+  const npcCh=['npc','npcoff','npcsk','npcskn'].some(f=>!eq(P[f],D[f]));
+  const nm=['npc','npcoff','npcsk','npcskn'].map(f=>checkPersona(k,f)).find(Boolean)||'';
+  $('#main').innerHTML=`<div class="row" style="margin-bottom:10px"><button id="per-back">← 境遇の一覧</button><span class="note">ランダムで生まれる確率 ${p[k].toFixed(1)}%</span></div>
+    <section class="grp"><h2>${esc(P.label)}</h2>
+    ${META.base[k]?`<p>出来事の文章・人物の絵は「${esc(DEF.personas[META.base[k]].label)}」と共通です（専用の文章は次の段階で作れます）。</p>`:'<p>この境遇の出来事の文章は、次の段階（イベント）で編集できるようにします。</p>'}
+    ${PF.map(row).join('')}
+    <div class="fld${npcCh?' changed':''}${nm?' bad':''}" id="pf-npcs"><div class="fl-head"><span class="lab">周りの人（4人）</span></div>
+      <p class="help">出来事がこの4人を順番で参照するため、人数は変えられません。「知り合う年齢」が0なら生まれたときから知っていて、空欄なら出来事で出会うまで知りません。名前は生まれたときに自動でつきます。</p>
+      <div class="npcgrid">${P.npc.map((r,i)=>`<div class="npc"><h4>${i+1}人目</h4><div class="ins">
+        <label class="in" style="flex:1 1 140px"><span>役割</span><input type="text" id="n-${k}-${i}-0" data-nk="${k}" data-ni="${i}" data-nc="0" value="${esc(r[0])}" maxlength="40"></label>
+        <label class="in"><span>関係</span><select id="n-${k}-${i}-1" data-nk="${k}" data-ni="${i}" data-nc="1">${[...new Set([...META.rels,r[1]])].map(x=>`<option${x===r[1]?' selected':''}>${esc(x)}</option>`).join('')}</select></label>
+        <label class="in"><span>好感度</span><input type="number" class="w2" id="n-${k}-${i}-2" data-nk="${k}" data-ni="${i}" data-nc="2" value="${r[2]}" min="0" max="100"></label>
+        <label class="in"><span>知り合う年齢</span><input type="number" class="w2" id="n-${k}-${i}-3" data-nk="${k}" data-ni="${i}" data-nc="3" value="${r[3]==null?'':r[3]}" min="0" max="110" placeholder="出来事"></label>
+        <label class="in"><span>年齢差</span><input type="number" class="w2" id="n-${k}-${i}-off" data-nk="${k}" data-ni="${i}" data-nc="off" value="${P.npcoff[i]}" min="-20" max="80"></label>
+        <label class="in"><span>技能（0〜1000）</span><input type="number" class="w2" id="n-${k}-${i}-sk" data-nk="${k}" data-ni="${i}" data-nc="sk" value="${P.npcsk[i]}" min="0" max="1000" step="10"></label>
+        <label class="in" style="flex:1 1 120px"><span>技能名</span><input type="text" id="n-${k}-${i}-skn" data-nk="${k}" data-ni="${i}" data-nc="skn" value="${esc(P.npcskn[i])}" maxlength="40"></label>
+      </div></div>`).join('')}</div>
+      <div class="fl-foot"><span>年齢差は主人公より何歳上か（マイナスは年下）</span><button class="link rst" data-nrst="1">周りの人を既定に戻す</button><span class="msg" role="alert">${esc(nm)}</span></div></div>
+    </section>`;
+  window.scrollTo(0,0);
+}
+function onPerInput(e){
+  const el=e.target;
+  if(el.dataset.pk){
+    const k=el.dataset.pk,f=el.dataset.pf,P=cur.personas[k];
+    if(f==='famneed')P.famneed=el.value==='母父'?['母','父']:[el.value];
+    else if(f==='ns'||['label','place','kid','name','skillName'].includes(f))P[f]=el.value;
+    else if(f==='randw'){const n=el.value===''?NaN:Number(el.value);if(Number.isFinite(n)){P.randw=n;delete errs['p-'+k+'-randw']}else errs['p-'+k+'-randw']=`${P.label}・ランダムの重み：数字を入れてください`}
+    else{const i=+el.dataset.i,n=el.value===''?NaN:Number(el.value);const ek=`p-${k}-${f}-${i}`;if(Number.isFinite(n)){const a=P[f].slice();a[i]=n;P[f]=a;delete errs[ek]}else errs[ek]=`${P.label}・${pfLabel(f)}：数字を入れてください`}
+    const box=document.getElementById('pf-'+f);
+    if(box){const m=Object.keys(errs).some(x=>x.startsWith(`p-${k}-${f}`))?'数字を入れてください':checkPersona(k,f);box.classList.toggle('changed',!eq(P[f],DEF.personas[k][f]));box.classList.toggle('bad',!!m);box.querySelector('.msg').textContent=m;}
+    if(f==='label'){const h=$('#main h2');if(h)h.textContent=P.label}
+  }else if(el.dataset.nk){
+    const k=el.dataset.nk,i=+el.dataset.ni,c=el.dataset.nc,P=cur.personas[k];const ek=`n-${k}-${i}-${c}`;
+    if(c==='0'||c==='1'){const npc=clone(P.npc);npc[i][+c]=el.value;P.npc=npc}
+    else if(c==='skn'){const a=P.npcskn.slice();a[i]=el.value;P.npcskn=a}
+    else{
+      const raw=el.value.trim();
+      if(c==='3'&&raw===''){const npc=clone(P.npc);npc[i][3]=null;P.npc=npc;delete errs[ek]}
+      else{const n=raw===''?NaN:Number(raw);
+        if(!Number.isFinite(n))errs[ek]=`${P.label}・周りの人${i+1}人目：数字を入れてください`;
+        else{delete errs[ek];
+          if(c==='2'||c==='3'){const npc=clone(P.npc);npc[i][+c]=n;P.npc=npc}
+          else if(c==='off'){const a=P.npcoff.slice();a[i]=n;P.npcoff=a}
+          else if(c==='sk'){const a=P.npcsk.slice();a[i]=n;P.npcsk=a}}}
+    }
+    const box=$('#pf-npcs');
+    if(box){const fs=['npc','npcoff','npcsk','npcskn'];const m=Object.keys(errs).some(x=>x.startsWith(`n-${k}-`))?'数字を入れてください':(fs.map(f=>checkPersona(k,f)).find(Boolean)||'');
+      box.classList.toggle('changed',fs.some(f=>!eq(P[f],DEF.personas[k][f])));box.classList.toggle('bad',!!m);box.querySelector('.msg').textContent=m}
+  }
+  refreshStatus();
+}
+
+/* ---------- 名前タブ ---------- */
+function renderName(){
+  const sets=[...META.nameSets,'n'];
+  $('#main').innerHTML=`<p class="intro">人物の名前の候補（ひらがな）です。名前の区切りは空白です。役割から男女が分かる人（母・父など）はその性別の名前から、それ以外は「男女どちらでも」から選ばれます。境遇ごとに、どの時代の名前を使うかは「境遇と人物」で選べます。</p>`+
+    sets.map(s=>{const v=cur.vars.NAMEP[s],d=DEF.vars.NAMEP[s];const ch=!eq(v,d);
+      const ta=(sub,list,key)=>`<label class="in" style="width:100%"><span>${sub}（${list.length}個）</span><textarea id="nm-${s}-${key}" data-ns="${s}" data-nkey="${key}" rows="3">${esc(list.join(' '))}</textarea></label>`;
+      return `<div class="fld${ch?' changed':''}" id="nf-${s}"><div class="fl-head"><span class="lab">${esc(NS_LABEL[s]||s)}</span></div><div class="ins" style="flex-direction:column">${Array.isArray(v)?ta('名前',v,'n'):ta('男の名',v.m,'m')+ta('女の名',v.f,'f')}</div>
+        <div class="fl-foot"><button class="link rst" data-nmrst="${s}">既定に戻す</button><span class="msg" role="alert"></span></div></div>`}).join('')+laterHTML();
+}
+function onNameInput(e){
+  const el=e.target,s=el.dataset.ns,key=el.dataset.nkey;if(!s)return;
+  const list=el.value.split(/[\s　、,]+/).map(x=>x.trim()).filter(Boolean);
+  const N=cur.vars.NAMEP=clone(cur.vars.NAMEP);
+  if(key==='n')N.n=list;else N[s]={...N[s],[key]:list};
+  const box=document.getElementById('nf-'+s);
+  box.classList.toggle('changed',!eq(N[s],DEF.vars.NAMEP[s]));
+  const lab=el.parentElement.querySelector('span');lab.textContent=lab.textContent.replace(/（\d+個）/,`（${list.length}個）`);
+  box.querySelector('.msg').textContent=list.length?'':'1つ以上入れてください';box.classList.toggle('bad',!list.length);
+  refreshStatus();
+}
+
+/* ---------- 変更一覧 ---------- */
+let confirmAll=false;
+function renderDiff(){
+  const L=diffList(),E=allErrors();
+  $('#main').innerHTML=`${E.length?`<div class="banner bad"><b>直してほしい所（${E.length}件）</b><br>${E.map(esc).join('<br>')}</div>`:''}
+    <section class="grp"><h2>変えた所（${L.length}件）</h2>
+    ${L.length?`<div>${L.map((d,i)=>`<div class="diff"><div class="what">${esc(d.label)}<small>${esc(d.grp)}</small><div class="vals"><s>${esc(d.a)}</s> → <b>${esc(d.b)}</b></div></div><button class="link" data-undo="${i}">既定に戻す</button></div>`).join('')}</div>
+      <div class="row" style="margin-top:12px"><button id="undo-all">${confirmAll?'本当に すべて既定に戻す':'すべて既定に戻す'}</button>${confirmAll?'<button id="undo-cancel">やめる</button>':''}</div>`:'<p class="note">まだ何も変えていません。既定（今のゲームの値）のままです。</p>'}
+    </section>
+    <section class="grp"><h2>ゲームへの反映</h2>
+      <div class="card"><p style="margin:0 0 8px">保存した設計は、まだ公開中のゲームには入っていません。チャットで次のように頼むと、Claude が内容を確かめてゲーム本体（GitHub の develop と公開中のゲーム）に組み込みます。</p>
+      <div class="row"><code id="ask" style="font-size:14px;background:var(--soft);padding:6px 10px;border-radius:6px">設計室の内容をゲームに反映して</code><button id="copy-ask">写す</button></div>
+      <p class="note" style="margin:8px 0 0">${dbOk?'保存してから頼んでください（未保存の変更は Claude から見えません）。':'この画面では保存先に接続できないため、Claude から設計が見えません。claude.ai でこの設計室を開いて保存してください。'}${lastApplied?`<br>前回の反映：${esc(lastApplied)}`:''}</p></div>
+    </section>`+laterHTML();
+}
+
+/* ---------- 試遊 ---------- */
+function gameDoc(d){
+  const inj=`<script>window.__KYOTO_DESIGN__=${JSON.stringify(d).replace(/</g,'\\u003c')};<\/script>`;
+  return GAME.replace('<head>','<head>'+inj);
+}
+function clearGameSaves(w){try{const ls=w.localStorage;for(let i=ls.length-1;i>=0;i--){const k=ls.key(i);if(k&&k.startsWith(GAME_KEY_PREFIX))ls.removeItem(k)}}catch(x){}}
+let simRes=null;
+function renderPlay(){
+  const E=allErrors();
+  $('#main').innerHTML=`${E.length?`<div class="banner bad">入力に誤りが${E.length}件あります。誤りのある値は使わずに試します（「変更一覧」で確認できます）。</div>`:''}
+    <section class="grp"><h2>この設計で遊ぶ</h2><p>今の設計（保存前の変更も含む）で、ゲームを最初から動かします。ここでのセーブは本番のゲームとは別で、始めるたびに消えます。</p>
+      <div class="row" style="margin-bottom:10px"><button class="pri" id="play-start">はじめから遊ぶ</button><span class="note" id="play-note"></span></div>
+      <div class="play" id="play-box" hidden><iframe id="playframe" title="試遊中のゲーム"></iframe></div>
+    </section>
+    <section class="grp"><h2>まとめて試す</h2><p>人生を何回も自動で流して、寿命・家族・能力・生まれる境遇の割合をまとめます。生活方針と選択は、ランダムに選びます。</p>
+      <div class="row"><label class="in"><span>人数</span><select id="sim-n"><option>100</option><option selected>300</option><option>1000</option></select></label>
+        <label class="row" style="gap:4px;font-size:13px"><input type="checkbox" id="sim-cmp" checked> 既定の値とも比べる</label>
+        <button class="pri" id="sim-start"${simBusy?' disabled':''}>試す</button></div>
+      <div class="prog" id="sim-prog" hidden><i></i></div><p class="note" id="sim-note"></p>
+      <div id="sim-res">${simRes?simHTML(simRes):''}</div>
+    </section>`+laterHTML();
+}
+function startPlay(){
+  const fr=$('#playframe');$('#play-box').hidden=false;
+  clearGameSaves(window);
+  fr.srcdoc=gameDoc(design());
+  fr.onload=()=>{try{const K=fr.contentWindow.KYOTO_DESIGN;clearGameSaves(fr.contentWindow);
+    $('#play-note').textContent=K?`${K.applied}件の設計を当てはめました${K.errors.length?`（使えなかった値 ${K.errors.length}件：${K.errors.join('、')}）`:''}`:'ゲームの読み込みに失敗しました'}catch(x){$('#play-note').textContent='読み込みの確認ができませんでした'}};
+  $('#play-box').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function loadSim(d){
+  return new Promise((res,rej)=>{const fr=$('#simframe');fr.onload=()=>{try{const K=fr.contentWindow.KYOTO_DESIGN;if(!K)throw new Error('no');res(K)}catch(e){rej(e)}};fr.srcdoc=gameDoc(d)});
+}
+async function runSimOne(d,n,label,base,span){
+  const K=await loadSim(d);K.sim.start(n);
+  await new Promise(done=>{const go=()=>{const p=K.sim.step(10);const i=$('#sim-prog i');if(i)i.style.width=Math.round((base+p*span)*100)+'%';const nt=$('#sim-note');if(nt)nt.textContent=`${label}を計算中…`;if(p<1)setTimeout(go,0);else done()};go()});
+  const r=K.sim.result();clearGameSaves($('#simframe').contentWindow);return r;
+}
+async function startSim(){
+  if(simBusy)return;simBusy=true;const n=+$('#sim-n').value,cmp=$('#sim-cmp').checked;
+  $('#sim-start').disabled=true;$('#sim-prog').hidden=false;
+  try{
+    const d=design(),hasChg=Object.keys(d.vars).length||d.personas;
+    const a=await runSimOne(d,n,'今の設計',0,cmp&&hasChg?0.5:1);
+    const b=cmp&&hasChg?await runSimOne({v:d.v,vars:{}},n,'既定の値',0.5,0.5):null;
+    simRes={n,a,b};$('#sim-note').textContent=`${n}人ぶん計算しました。`;
+    const box=$('#sim-res');if(box)box.innerHTML=simHTML(simRes);
+  }catch(e){$('#sim-note').textContent='計算に失敗しました。もう一度試してください。'}
+  simBusy=false;const b=$('#sim-start');if(b)b.disabled=false;
+}
+function stat(r){
+  const a=r.ages.slice().sort((x,y)=>x-y),n=a.length||1;
+  const mean=a.reduce((s,x)=>s+x,0)/n,med=a[Math.floor(n/2)]||0;
+  const kid=a.filter(x=>x<=5).length/n*100,old=a.filter(x=>x>=80).length/n*100;
+  const bins=Array.from({length:12},(_,i)=>a.filter(x=>Math.min(11,Math.floor(x/10))===i).length/n*100);
+  return {mean,med,kid,old,max:a[a.length-1]||0,bins,sib:r.sib/(r.lives||1),miss:r.miss/(r.lives||1)*100,ch:(r.dec+r.small)/(r.lives||1)};
+}
+function simHTML(R){
+  const A=stat(R.a),B=R.b?stat(R.b):null,f=(v,d=1)=>Number.isFinite(v)?v.toFixed(d):'—';
+  const kv=(h,a,b,d)=>`<span>${h}</span><b>${a}</b><span class="note">${B?b:''}</span>`;
+  const mx=Math.max(...A.bins,...(B?B.bins:[0]),1);
+  const tot=Object.values(R.a.births).reduce((s,x)=>s+x,0)||1;
+  const births=Object.entries(R.a.births).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`${esc(cur.personas[k]?cur.personas[k].label:k)} ${(v/tot*100).toFixed(1)}%`).join('、');
+  const causes=Object.entries(R.a.causes).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`${esc(k)} ${(v/(R.a.lives||1)*100).toFixed(0)}%`).join('、');
+  return `<div class="res">
+    <div class="card"><div class="kv"><span class="h">${R.n}人の結果</span><span class="h">今の設計</span><span class="h">${B?'既定の値':''}</span>
+      ${kv('平均寿命',f(A.mean)+'歳',B&&f(B.mean)+'歳')}${kv('寿命の中央値',A.med+'歳',B&&B.med+'歳')}${kv('5歳までに亡くなる',f(A.kid)+'%',B&&f(B.kid)+'%')}
+      ${kv('80歳以上まで生きる',f(A.old)+'%',B&&f(B.old)+'%')}${kv('いちばん長生き',A.max+'歳',B&&B.max+'歳')}
+      ${kv('兄弟姉妹（平均）',f(A.sib,2)+'人',B&&f(B.sib,2)+'人')}${kv('祖母が加わる',f(A.miss)+'%',B&&f(B.miss)+'%')}
+      ${kv('選択の回数（1人あたり）',f(A.ch,1)+'回',B&&f(B.ch,1)+'回')}
+      ${R.a.at30.map((v,i)=>kv(`30歳の${META.stats[i]}（平均）`,v,B&&R.b.at30[i])).join('')}</div></div>
+    <div class="card"><b>亡くなった年齢</b><div class="legend" style="margin:4px 0 6px"><span><i style="background:var(--ai)"></i>今の設計</span>${B?'<span><i style="background:var(--line)"></i>既定の値</span>':''}</div>
+      <div class="hist">${A.bins.map((v,i)=>`<div class="hrow"><span>${i===11?'110':i*10+'代'}</span><div class="hbar">${B?`<i class="d" style="width:${B.bins[i]/mx*100}%"></i>`:''}<i class="n" style="width:${v/mx*100}%"></i></div><span>${v.toFixed(0)}%</span></div>`).join('')}</div></div>
+    <div class="card"><b>亡くなった理由</b><p class="note" style="margin:4px 0 0">${causes||'—'}</p></div>
+    <div class="card"><b>ランダムで生まれた境遇（3000回）</b><p class="note" style="margin:4px 0 0">${births}</p></div>
+    ${R.a.errors.length?`<div class="banner bad">計算中に止まった人生がありました：${R.a.errors.map(esc).join('、')}</div>`:''}
+  </div>`;
+}
+function laterHTML(){return `<div class="later note"><b>次の段階で作るもの</b>：イベント140件の文章と効果の編集、仕組みの設計書（文章で書いた設計を Claude が実装）。</div>`}
+
+/* ---------- タブと操作 ---------- */
+function show(t){
+  tab=t;document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'));
+  ({num:renderNum,per:renderPer,name:renderName,diff:renderDiff,play:renderPlay})[t]();
+  try{localStorage.setItem('kyoto-designer-tab',t)}catch(x){}
+}
+document.querySelector('nav.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b&&cur){if(b.dataset.tab!=='per')perSel=null;show(b.dataset.tab)}});
+$('#main').addEventListener('input',e=>{if(!cur)return;if(tab==='num')onNumInput(e);else if(tab==='per')onPerInput(e);else if(tab==='name')onNameInput(e)});
+$('#main').addEventListener('change',e=>{if(!cur)return;if(tab==='per'&&e.target.tagName==='SELECT')onPerInput(e)});
+$('#main').addEventListener('click',e=>{
+  const t=e.target;if(!cur)return;
+  if(t.dataset.rst){const f=FIELD_BY_ID[t.dataset.rst];setP(cur.vars,f.path,clone(getP(DEF.vars,f.path)));Object.keys(errs).forEach(k=>{if(k.startsWith(t.dataset.rst+'-'))delete errs[k]});const box=document.getElementById(t.dataset.rst);box.outerHTML=fieldHTML(f,t.dataset.rst);refreshStatus();return}
+  const pr=t.closest('[data-per]');if(pr){perSel=pr.dataset.per;renderPer();return}
+  if(t.id==='per-back'){perSel=null;renderPer();return}
+  if(t.dataset.prst){const k=perSel,f=t.dataset.prst;cur.personas[k][f]=clone(DEF.personas[k][f]);Object.keys(errs).forEach(x=>{if(x.startsWith(`p-${k}-${f}`))delete errs[x]});renderPerEdit(k);refreshStatus();return}
+  if(t.dataset.nrst){const k=perSel;['npc','npcoff','npcsk','npcskn'].forEach(f=>{cur.personas[k][f]=clone(DEF.personas[k][f])});Object.keys(errs).forEach(x=>{if(x.startsWith(`n-${k}-`))delete errs[x]});renderPerEdit(k);refreshStatus();return}
+  if(t.dataset.nmrst){cur.vars.NAMEP=clone(cur.vars.NAMEP);cur.vars.NAMEP[t.dataset.nmrst]=clone(DEF.vars.NAMEP[t.dataset.nmrst]);renderName();refreshStatus();return}
+  if(t.dataset.undo!=null){diffList()[+t.dataset.undo].undo();errs={};renderDiff();refreshStatus();return}
+  if(t.id==='undo-all'){if(!confirmAll){confirmAll=true;renderDiff();return}cur=clone(DEF);errs={};confirmAll=false;renderDiff();refreshStatus();toast('すべて既定に戻しました（まだ保存していません）');return}
+  if(t.id==='undo-cancel'){confirmAll=false;renderDiff();return}
+  if(t.id==='copy-ask'){const s=$('#ask').textContent;(navigator.clipboard?navigator.clipboard.writeText(s):Promise.reject()).then(()=>toast('写しました')).catch(()=>{const r=document.createRange();r.selectNodeContents($('#ask'));const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast('文字を選びました。コピーしてください')});return}
+  if(t.id==='play-start'){startPlay();return}
+  if(t.id==='sim-start'){startSim();return}
+});
+$('#btn-save').addEventListener('click',async()=>{
+  if(!dbOk||allErrors().length)return;const d=design();$('#btn-save').disabled=true;$('#st-save').textContent='保存中…';
+  try{await dbRef.set({...appliedInfo,data:d,savedAt:new Date().toISOString(),changes:changedCount()});saved=d;toast('保存しました');}
+  catch(e){toast(e&&e.code==='invalid_argument'?'この閲覧権限では保存できません':'保存できませんでした。少し待ってからもう一度押してください')}
+  refreshStatus();
+});
+
+/* ---------- 起動 ---------- */
+function overlay(d){                  // 保存された設計を、既定値の上に重ねる（知らない項目は無視）
+  if(!d)return;
+  for(const k in d.vars||{})if(k in cur.vars)cur.vars[k]=clone(d.vars[k]);
+  for(const p in d.personas||{})if(cur.personas[p])for(const f in d.personas[p])if(f in cur.personas[p])cur.personas[p][f]=clone(d.personas[p][f]);
+}
+async function boot(){
+  try{const r=await fetch('game.html');if(!r.ok)throw new Error(r.status);GAME=await r.text()}
+  catch(e){$('#main').innerHTML='<div class="banner bad">ゲーム本体（game.html）を読み込めませんでした。ページを開き直してください。</div>';$('#st-save').textContent='読み込み失敗';return}
+  let K;try{K=await loadSim({v:1,vars:{}})}catch(e){$('#main').innerHTML='<div class="banner bad">ゲームの値を読み取れませんでした。</div>';return}
+  DEF=clone(K.defaults);META=clone(K.meta);cur=clone(DEF);saved={v:DEF.v,vars:{}};
+  let draft=null;try{draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null')}catch(x){}
+  let db=null;try{db=window.claude&&window.claude.use?await window.claude.use('db'):null}catch(x){db=null}
+  if(db){dbRef=db.doc('design/current');
+    try{const snap=await dbRef.get();dbOk=true;if(snap.exists){const b=snap.data();overlay(b.data);saved=design();if(b.appliedAt)appliedInfo={appliedAt:b.appliedAt,appliedCommit:b.appliedCommit||null};lastApplied=b.appliedAt?`${b.appliedAt}${b.appliedCommit?'（'+b.appliedCommit+'）':''}`:null}}
+    catch(e){dbOk=false}}
+  if(draft&&draft.dirty&&draft.data){cur=clone(DEF);overlay(draft.data);toast('保存していない変更を、この端末の下書きから戻しました')}
+  else if(!dbOk&&draft&&draft.data){overlay(draft.data)}
+  let t='num';try{t=localStorage.getItem('kyoto-designer-tab')||'num'}catch(x){}
+  if(!['num','per','name','diff','play'].includes(t))t='num';
+  show(t);refreshStatus();
+  if(!dbOk)$('#main').insertAdjacentHTML('afterbegin','<div class="banner">保存先（データベース）に接続できないため、変更はこの端末の下書きにだけ残ります。claude.ai でこの設計室を開くと保存できます。</div>');
+}
+boot();
+</script>
