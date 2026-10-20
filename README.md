@@ -1,5 +1,7 @@
 # 2000年の地球上の誰か1人。
 
+> **最新版は `kyoto/` にあります**（Claudeで開発中の「京都の暮らし 見本」。能力4項目・気質・イベント140件・状態システム等）。このREADMEの以下は旧試作（`main` 保存分）の説明です。最新版の使い方は [kyoto/README.md](kyoto/README.md)、登録時の報告は [docs/HANDOFF_kyoto_2026-10-20.md](docs/HANDOFF_kyoto_2026-10-20.md)、開発の運用は [docs/DEVELOPMENT_WORKFLOW.md](docs/DEVELOPMENT_WORKFLOW.md) を見てください。
+
 時代を越えて、一人の暮らしを見届ける人生シミュレーション。スマホ縦画面向けの、依存パッケージなし・静的Webの試作版です。
 
 ## 起動
