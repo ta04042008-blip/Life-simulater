@@ -17,7 +17,7 @@ const make=()=>{
     window:{addEventListener:()=>{}},document:{addEventListener:()=>{}},
     localStorage:storage,KEY:'kyoto-kurashi-mihon-v4',S:makeState(),PERSONAS:{common:{}},
     setTimeout:(fn,ms)=>{steps.push(fn);return steps.length},clearTimeout:()=>{},
-    toast:m=>messages.push(m),migrate:s=>{s.sv=1;return s},
+    toast:m=>messages.push(m),$:(id)=>null,migrate:s=>{s.sv=1;return s},
     stop:()=>{},setBar:()=>{},bthEnd:()=>{},evHide:()=>{},go:()=>{},centerScene:()=>{},
     confirm:()=>true,remaining:0,resume:false,sceneX:0,
     Date,Math,console,
