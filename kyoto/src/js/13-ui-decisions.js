@@ -40,7 +40,7 @@ function runSlot(s){
   popQ=[];lastBubble=null;
   if(s.k==='o')fireOrdinary();else fireLearn();
 }
-function fireSlot(s){runSlot(s);render();showFx()}
+function fireSlot(s){runSlot(s);render();showFx();saveAutoSoon()}
 function flushSlots(){slots.slice().forEach(runSlot)}
 function armSlots(ms){
   evT.forEach(clearTimeout);evT=[];
@@ -133,7 +133,7 @@ function tick(){
   stHlSync();
   // death (age-based hazard, raised by low stamina, illness and accidents)
   const h=annualHazard(S.age,S.stats[0],S.ongoing);
-  if(S.age>=MAXAGE||Math.random()<1-Math.exp(-h.tot*yrs)){die(h);return true}
+  if(S.age>=MAXAGE||Math.random()<1-Math.exp(-h.tot*yrs)){die(h);saveAutoSoon();return true}
   // decision
   if(S.age>=13&&S.t>=S.nextDecT){
     let d=Math.random()<0.85?evPick('b'):null;       // 設計案の大きな選択（なければ従来の決断）
@@ -144,6 +144,7 @@ function tick(){
   }else if(S.age>=4&&S.t>=S.nextSmallT){     // 小さな選択：選ぶまで時間が止まる
     S.decision=(Math.random()<0.85&&evPick('s'))||makeSmall();lastBubble='どうしよう…';S.nextSmallT=S.t+SMALL_GAP(yq);
   }
+  saveAutoSoon();
   return true;
 }
 /* ---------- 決断イベントの演出 ----------
@@ -246,6 +247,7 @@ function choose(i){
   if(o.later){if(o.later.fu)S.pending.push({in:evIn(o.later.fu.sp.m),fu:o.later.fu});else S.pending.push({in:S.mode==='q'?Math.max(1,Math.ceil(o.later.m/3)):1,t:o.later.t,x:o.later.x,fx:o.later.fx})}
   lastBubble=o.l+'！';
   const stats=popQ.filter(q=>Math.abs(q[1])>=3).map(q=>[q[0],q[1]]);
+  saveAutoSoon();
   render();
   if(d.small){evClose();return}            // 小さな選択は結果の画面を出さず、そのまま続ける
   openResult(d,o,stats);
