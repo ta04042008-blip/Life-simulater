@@ -319,7 +319,7 @@ h2{font-size:16.67px;font-weight:400;color:var(--muted);margin:0;letter-spacing:
       <div class="chips" id="personas" role="group" aria-label="境遇"></div>
       <p class="note">選ぶと0歳から生まれ直します。人物・出来事・数値はすべて仮のデータです。</p>
       <button class="pbtn" id="newrand" hidden>ランダムで生まれ直す</button>
-      <p class="note">ランダム：0〜1900年のどこかに生まれ、その時代の境遇になります。</p>
+      <p class="note">ランダム：西暦1〜1900年のどこかに生まれ、その時代の境遇になります。</p>
     </div>
     <div class="card msec">
       <h2>時間を進める</h2>
@@ -333,10 +333,16 @@ h2{font-size:16.67px;font-weight:400;color:var(--muted);margin:0;letter-spacing:
     <div class="card msec">
       <h2>記録・セーブ</h2>
       <div class="mgrid" style="grid-template-columns:1fr 1fr">
-        <button class="pbtn" id="save">セーブ</button>
-        <button class="pbtn" id="load">ロード</button>
+        <button class="pbtn" id="save">手動セーブ</button>
+        <button class="pbtn" id="load">手動ロード</button>
+        <button class="pbtn" id="load-auto">自動保存から再開</button>
+        <button class="pbtn" id="export-save">JSONを書き出す</button>
+        <button class="pbtn" id="import-save">JSONを読み込む</button>
+        <button class="pbtn" id="restore-protected" hidden>変更前の人生に戻す</button>
         <button class="pbtn" id="totitle">タイトルへ</button>
       </div>
+      <input id="import-file" type="file" accept=".json,application/json" hidden>
+      <p class="note">自動保存は手動セーブとは別に、進行・選択後や画面を閉じる際に更新されます。読み込み前の人生は復元用に退避します。端末を替える前にはJSONも保存してください。</p>
       <p class="toast" id="toast" role="status"></p>
     </div>
     <div class="card msec">
@@ -1981,7 +1987,7 @@ function runSlot(s){
   popQ=[];lastBubble=null;
   if(s.k==='o')fireOrdinary();else fireLearn();
 }
-function fireSlot(s){runSlot(s);render();showFx()}
+function fireSlot(s){runSlot(s);render();showFx();saveAutoSoon()}
 function flushSlots(){slots.slice().forEach(runSlot)}
 function armSlots(ms){
   evT.forEach(clearTimeout);evT=[];
@@ -2074,7 +2080,7 @@ function tick(){
   stHlSync();
   // death (age-based hazard, raised by low stamina, illness and accidents)
   const h=annualHazard(S.age,S.stats[0],S.ongoing);
-  if(S.age>=MAXAGE||Math.random()<1-Math.exp(-h.tot*yrs)){die(h);return true}
+  if(S.age>=MAXAGE||Math.random()<1-Math.exp(-h.tot*yrs)){die(h);saveAutoSoon();return true}
   // decision
   if(S.age>=13&&S.t>=S.nextDecT){
     let d=Math.random()<0.85?evPick('b'):null;       // 設計案の大きな選択（なければ従来の決断）
@@ -2085,6 +2091,7 @@ function tick(){
   }else if(S.age>=4&&S.t>=S.nextSmallT){     // 小さな選択：選ぶまで時間が止まる
     S.decision=(Math.random()<0.85&&evPick('s'))||makeSmall();lastBubble='どうしよう…';S.nextSmallT=S.t+SMALL_GAP(yq);
   }
+  saveAutoSoon();
   return true;
 }
 /* ---------- 決断イベントの演出 ----------
@@ -2187,6 +2194,7 @@ function choose(i){
   if(o.later){if(o.later.fu)S.pending.push({in:evIn(o.later.fu.sp.m),fu:o.later.fu});else S.pending.push({in:S.mode==='q'?Math.max(1,Math.ceil(o.later.m/3)):1,t:o.later.t,x:o.later.x,fx:o.later.fx})}
   lastBubble=o.l+'！';
   const stats=popQ.filter(q=>Math.abs(q[1])>=3).map(q=>[q[0],q[1]]);
+  saveAutoSoon();
   render();
   if(d.small){evClose();return}            // 小さな選択は結果の画面を出さず、そのまま続ける
   openResult(d,o,stats);
@@ -2846,24 +2854,147 @@ function birthCeremony(rand){
   }
 }
 
+// 旧手動セーブ KEY は変更しない。自動保存・復元前の退避を別キーへ保存。
+const SAVE_AUTO_KEY='kyoto-kurashi-mihon-v4-autosave';
+const SAVE_PREV_KEY='kyoto-kurashi-mihon-v4-autosave-previous';
+const SAVE_PROTECT_KEY='kyoto-kurashi-mihon-v4-before-replace';
+const SAVE_FORMAT='earth2000-kyoto-save', SAVE_EXPORT_VERSION=1;
+let saveArmed=false, savePending=null, saveWarned=false;
+
+function saveSnapshot(){return JSON.stringify(S)}
+function saveStateOk(s){
+  if(!s||typeof s!=='object'||Array.isArray(s))throw new Error('保存形式が不正です');
+  if(!Object.prototype.hasOwnProperty.call(PERSONAS,s.pid))throw new Error('不明な境遇です');
+  if(typeof s.ver==='number'&&s.ver>5)throw new Error('新しい版のセーブデータです');
+  if(s.sv!=null&&(!Number.isInteger(s.sv)||s.sv>1||s.sv<0))throw new Error('対応していない状態システムの版です');
+  if(!Number.isFinite(s.age)||s.age<0||s.age>110||!Number.isFinite(s.year)||s.year<0||!Number.isFinite(s.t)||s.t<0)throw new Error('年齢・年・経過時間が不正です');
+  if(!['q','y'].includes(s.mode)||!Number.isInteger(s.q)||s.q<0||s.q>3)throw new Error('進行状態が不正です');
+  if(!Array.isArray(s.stats)||s.stats.length!==4||!s.stats.every(v=>Number.isFinite(v)&&v>=0&&v<=1000))throw new Error('能力値が不正です');
+  if(!Array.isArray(s.npc)||s.npc.length>1000||!s.npc.every(n=>n&&typeof n==='object'&&!Array.isArray(n)))throw new Error('人物データが不正です');
+  if(!Array.isArray(s.log)||!Array.isArray(s.chron)||!Array.isArray(s.pending))throw new Error('人生記録が不正です');
+  if(s.decision!=null&&(!s.decision||!Array.isArray(s.decision.opts)||!s.decision.opts.length))throw new Error('回答待ちのデータが不正です');
+  if(s.npc.some(n=>!Array.isArray(n.stats)||n.stats.length!==4||!n.stats.every(v=>Number.isFinite(v)&&v>=0&&v<=1000)))throw new Error('人物の能力値が不正です');
+  return s;
+}
+function savePrepare(input){
+  if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('JSONの形式が不正です');
+  let raw=input;
+  if(Object.prototype.hasOwnProperty.call(input,'format')){
+    if(input.format!==SAVE_FORMAT||input.version!==SAVE_EXPORT_VERSION)throw new Error('対応していない書き出し形式です');
+    raw=input.state;
+  }
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('人生データがありません');
+  // 検査・移行は現在のSとは別のオブジェクトで行い、失敗時もプレイ中の状態を保持する。
+  const s=JSON.parse(JSON.stringify(raw));
+  if(!Object.prototype.hasOwnProperty.call(PERSONAS,s.pid)||!Array.isArray(s.npc)||!Array.isArray(s.stats))throw new Error('読み込めない形式です');
+  if(typeof s.ver==='number'&&s.ver>5)throw new Error('新しい版のセーブデータです');
+  if(s.sv!=null&&(!Number.isInteger(s.sv)||s.sv>1||s.sv<0))throw new Error('対応していない状態システムの版です');
+  if(!Number.isFinite(s.age)||!Number.isFinite(s.year)||!Number.isFinite(s.t))throw new Error('時間が不正です');
+  return saveStateOk(migrate(s));
+}
+function saveProtectPrevious(){
+  // 新しい人生・ロード・ファイル読み込み前の人生を独立した復元用スロットに退避。
+  try{
+    const previous=saveArmed&&S?saveSnapshot():localStorage.getItem(SAVE_AUTO_KEY);
+    if(previous)localStorage.setItem(SAVE_PROTECT_KEY,previous);
+    return true;
+  }catch(e){toast('保存領域が不足しているため、現在の人生を保護できません。JSONを書き出してください。');return false}
+}
+function saveAutoNow(){
+  if(!saveArmed||!S)return false;
+  if(savePending!=null){clearTimeout(savePending);savePending=null}
+  try{
+    const data=saveSnapshot(),old=localStorage.getItem(SAVE_AUTO_KEY);
+    if(data===old)return true;
+    if(old)localStorage.setItem(SAVE_PREV_KEY,old);
+    localStorage.setItem(SAVE_AUTO_KEY,data);
+    saveWarned=false;
+    return true;
+  }catch(e){
+    if(!saveWarned){toast('自動保存できませんでした。JSONを書き出してください。');saveWarned=true}
+    return false;
+  }
+}
+function saveAutoSoon(){
+  if(!saveArmed||savePending!=null)return;
+  savePending=setTimeout(()=>{savePending=null;saveAutoNow()},250);
+}
+function saveNewLife(){
+  saveArmed=true;
+  saveAutoNow();
+}
+function saveRestore(input,label,protect=true){
+  let candidate;
+  try{candidate=savePrepare(input)}catch(e){toast('ロードできませんでした：'+e.message);return false}
+  if(protect&&!saveProtectPrevious())return false;
+  // 旧データそのものを一度だけ保存してから移行済みデータを適用する。
+  if(input&&input.sv==null){
+    try{if(!localStorage.getItem(KEY+'-premigrate'))localStorage.setItem(KEY+'-premigrate',JSON.stringify(input))}catch(e){}
+  }
+  stop();remaining=null;setBar(0,0);resume=false;bthEnd();
+  S=candidate;saveArmed=true;evHide();sceneX=null;
+  go('life');centerScene();saveAutoNow();
+  toast(label+'を読み込みました。');
+  return true;
+}
+function saveLoadKey(key,label){
+  let raw;
+  try{const text=localStorage.getItem(key);if(!text){toast(label+'がありません。');return false}raw=JSON.parse(text)}
+  catch(e){toast(label+'を読み込めません：'+e.message);return false}
+  return saveRestore(raw,label,key!==SAVE_PROTECT_KEY);
+}
+function saveManual(){
+  try{localStorage.setItem(KEY,saveSnapshot());saveAutoNow();toast('手動セーブしました。')}
+  catch(e){toast('セーブできませんでした。JSONを書き出してください。')}
+}
+function saveExport(){
+  if(!S){toast('書き出す人生がありません。');return}
+  try{
+    const payload={format:SAVE_FORMAT,version:SAVE_EXPORT_VERSION,exportedAt:new Date().toISOString(),state:JSON.parse(saveSnapshot())};
+    const url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
+    const a=document.createElement('a');
+    a.href=url;a.download='kyoto-life-'+String(S.year)+'-'+String(S.age)+'sai.json';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    toast('JSONを作成しました。端末に保存してください。');
+  }catch(e){toast('書き出しに失敗しました：'+e.message)}
+}
+async function saveImportFile(file){
+  if(!file)return false;
+  if(file.size>5*1024*1024){toast('JSONファイルが大きすぎます（上限5MB）。');return false}
+  let parsed;
+  try{parsed=JSON.parse(await file.text());savePrepare(parsed)}
+  catch(e){toast('読み込みを中止しました：'+e.message);return false}
+  if(!confirm('今の人生を復元用に保護して、ファイルの人生へ切り替えますか？'))return false;
+  return saveRestore(parsed,'JSONファイル');
+}
+function saveButtons(){
+  const el=$('restore-protected');
+  if(!el)return;
+  try{el.hidden=!localStorage.getItem(SAVE_PROTECT_KEY)}catch(e){el.hidden=true}
+}
+window.addEventListener('pagehide',()=>saveAutoNow());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveAutoNow()});
 /* ---------- タイトル画面 ---------- */
 function titleScreen(){
   const old=$('ttl');if(old)old.remove();
-  let has=false;try{has=!!localStorage.getItem(KEY)}catch(e){}
+  let has=false,hasAuto=false;try{has=!!localStorage.getItem(KEY);hasAuto=!!localStorage.getItem(SAVE_AUTO_KEY)}catch(e){}
   const el=document.createElement('div');el.className='ttl';el.id='ttl';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','タイトル');
   const bg=(BG.common&&BG.common.spring)||'';
   el.innerHTML=`<div class="in"><div class="pic" style="background-image:url(${bg})" aria-hidden="true"></div>
     <h1>2000年の地球上の誰か1人。</h1><p class="sub">日本版プロトタイプ（京都）</p>
     <div class="menu" id="tmenu">
       <button class="tb main" id="tgo">はじめる</button>
-      ${has?'<button class="tb" id="tcont">つづきから</button>':''}
+      ${hasAuto?'<button class="tb" id="tcont">自動保存からつづく</button>':''}
+      ${has?'<button class="tb" id="tmanual">手動セーブからつづく</button>':''}
       <button class="tb" id="tsel">境遇を選ぶ</button>
     </div>
     <div class="list" id="tlist" hidden></div>
     <p class="small">「はじめる」で、時代と境遇はランダムに決まります。</p></div>`;
   document.body.appendChild(el);
   $('tgo').onclick=()=>{el.remove();const b=randomBirth();birthMode='random';newLife(b.pid,b.year,true)};
-  if(has)$('tcont').onclick=()=>{el.remove();$('load').onclick()};
+  if(hasAuto)$('tcont').onclick=()=>{if(saveLoadKey(SAVE_AUTO_KEY,'自動保存'))el.remove()};
+  if(has)$('tmanual').onclick=()=>{if(saveLoadKey(KEY,'手動セーブ'))el.remove()};
   $('tsel').onclick=()=>{
     const l=$('tlist');l.hidden=!l.hidden;
     if(!l.innerHTML)l.innerHTML=Object.keys(PERSONAS).sort((a,b)=>PERSONAS[a].yr[0]-PERSONAS[b].yr[0]).map(k=>`<button class="chip" data-tp="${k}">${PERSONAS[k].label}</button>`).join('');
@@ -2872,7 +3003,7 @@ function titleScreen(){
   $('tgo').focus();
 }
 const BTH_ON=()=>!(navigator.webdriver&&!window.__bth);        // 自動テストの画面操作は演出を飛ばす（演出自体は window.__bth=1 で確認する）
-function newLife(pid,year,rand){stop();remaining=null;setBar(0,0);resume=false;bthEnd();newGame(pid,year);sceneX=null;go('life');centerScene();if(BTH_ON())birthCeremony(!!rand)}
+function newLife(pid,year,rand){if(!saveProtectPrevious())return;stop();remaining=null;setBar(0,0);resume=false;bthEnd();newGame(pid,year);saveNewLife();sceneX=null;go('life');centerScene();if(BTH_ON())birthCeremony(!!rand)}
 $('play').onclick=()=>timer?(stop(),render()):start();
 $('speed').onclick=()=>{
   const old=SPEEDS[speedIdx][0];speedIdx=(speedIdx+1)%SPEEDS.length;const nw=SPEEDS[speedIdx][0];
@@ -2883,9 +3014,9 @@ $('adv1').onclick=()=>step(1);$('adv12').onclick=()=>step(S.mode==='q'?4:5);$('a
 $('newrand').onclick=()=>{const b=randomBirth();newLife(b.pid,b.year,true)};
 document.addEventListener('click',e=>{
   if(evMode&&!e.target.closest('[data-opt]')&&(e.target.closest('#evcard')||e.target.closest('.evback'))){evTap();return}
-  const pol=e.target.closest('[data-pol]');if(pol){S.policy=pol.dataset.pol;render()}
+  const pol=e.target.closest('[data-pol]');if(pol){S.policy=pol.dataset.pol;render();saveAutoSoon()}
   if(e.target.closest('#evbadok')&&S&&S.decision&&!evDecOk(S.decision)){addLog('c',`【イベントの不備】「${S.decision.title||'名称なし'}」に不備（${evDecWhy(S.decision)}）があり、結果を適用せずに中止した`,true);S.decision=null;evBanner();render();return}
-  const stc=e.target.closest('[data-stc]');if(stc){const why=stConfirm(stc.dataset.stc,stc.dataset.yes==='1');if(why)toast(why);render();return}
+  const stc=e.target.closest('[data-stc]');if(stc){const why=stConfirm(stc.dataset.stc,stc.dataset.yes==='1');if(why)toast(why);render();saveAutoSoon();return}
   const op=e.target.closest('[data-opt]');if(op)choose(+op.dataset.opt);
   const p=e.target.closest('[data-p]');if(p&&birthMode==='select')newLife(p.dataset.p,undefined,false);
   const bm=e.target.closest('[data-bm]');if(bm){birthMode=bm.dataset.bm;render()}
@@ -2914,9 +3045,14 @@ document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>go(b.dataset.g
 const KEY='kyoto-kurashi-mihon-v4';
 function toast(t){$('toast').textContent=t}
 $('totitle').onclick=()=>{stop();titleScreen()};
-$('save').onclick=()=>{try{localStorage.setItem(KEY,JSON.stringify(S));toast('セーブしました。')}catch(e){toast('この環境では保存できません。')}};
-$('load').onclick=()=>{try{const v=localStorage.getItem(KEY);if(!v){toast('セーブデータがありません。');return}stop();remaining=null;setBar(0,0);const raw=JSON.parse(v);if(!raw.sv){try{localStorage.setItem(KEY+'-premigrate',v)}catch(_){}}   /* 状態システム導入前のセーブは、移行前のコピーを残す */
-  S=migrate(raw);evHide();render();centerScene();toast('ロードしました。')}catch(e){toast('ロードできませんでした。'+(e&&e.message&&/新しい版/.test(e.message)?'（'+e.message+'）':''))}};
+$('save').onclick=saveManual;
+$('load').onclick=()=>saveLoadKey(KEY,'手動セーブ');
+$('load-auto').onclick=()=>saveLoadKey(SAVE_AUTO_KEY,'自動保存');
+$('export-save').onclick=saveExport;
+$('import-save').onclick=()=>{$('import-file').click()};
+$('import-file').onchange=async e=>{const file=e.target.files&&e.target.files[0];await saveImportFile(file);e.target.value='';saveButtons()};
+$('restore-protected').onclick=()=>{if(confirm('前の人生に戻しますか？ 今の状態は自動保存のひとつ前のスロットに残ります。'))saveLoadKey(SAVE_PROTECT_KEY,'復元用バックアップ');saveButtons()};
+saveButtons();
 
 function kzNode(n){
   if(n.nodeType===3){if(n.parentNode&&/^(SCRIPT|STYLE)$/.test(n.parentNode.nodeName))return;const v=kz(n.nodeValue);if(v!==n.nodeValue)n.nodeValue=v;return}
