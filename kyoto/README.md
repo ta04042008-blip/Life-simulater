@@ -37,7 +37,7 @@ kyoto/
 │     ├─ 03-family-learning-events.js  家族・学び・仕事の出来事
 │     ├─ 04-names-family.js      人物の名前と家族の生成
 │     ├─ 05-birth-era-personas.js 生まれ年と時代・新しい13境遇・ランダム出生
-│     ├─ 06-event-spec-engine.js イベント140件の処理（自動／小さな選択／大きな選択・後日談）
+│     ├─ 06-event-spec-engine.js イベントの処理（2026-10-21に140件は削除済み。元データは legacy/events-140.json）（自動／小さな選択／大きな選択・後日談）
 │     ├─ 07〜11-state-*.js, 11-monthly-progress.js   状態システム（段階1〜8）・月の進行
 │     ├─ 12-ui-household.js      家計画面
 │     ├─ 13-ui-decisions.js      決断の演出
@@ -50,6 +50,7 @@ kyoto/
 ├─ assets/                 人物の絵(64×64)45点・背景(288×96)68点・フォント2点（詳細は assets/README.md）
 ├─ dist/kyoto.html         組み立て済みの完成品（ソースから作り直せる。ソースを変えたら作り直してコミット）
 ├─ designer/index.html     設計室（数値・境遇・人物・名前を編集して試遊するツール。詳しくは designer/README.md）
+├─ legacy/events-140.json  削除した旧イベント140件の控え（検証用ビルド `KYOTO_LEGACY_EVENTS=1 node tools/build.mjs 出力先` で差し戻せる）
 ├─ tools/                  build.mjs / check.mjs / mkfont.py
 │     └─ 18a-save-system.js    自動保存・安全な復元・JSON入出力
 │     └─ 18b-design-hook.js    設計室の受け口（設計データがある時だけ値を差し替える。公開版では何もしない）

@@ -16,9 +16,16 @@ const css = trimEnd1(rd('src/css/style.css'));
 const order = JSON.parse(rd('src/js/order.json'));
 const js = trimEnd1(order.map((f) => rd('src/js/' + f).split('\n').slice(1).join('\n')).join(''));
 
+// 検証用：KYOTO_LEGACY_EVENTS=1 のとき、削除した旧イベント140件（legacy/events-140.json）を差し戻して組み立てる（公開物には使わない）
+const legacy = process.env.KYOTO_LEGACY_EVENTS === '1';
+const evLine = 'const EV_RAW=[];';
+const jsFull = legacy
+  ? (js.includes(evLine) ? js.replace(evLine, () => 'const EV_RAW=' + JSON.stringify(JSON.parse(rd('legacy/events-140.json'))) + ';') : (() => { throw new Error('EV_RAW の行が見つかりません') })())
+  : js;
+
 let html = rd('src/template.html')
   .replace('@@INCLUDE_CSS@@', () => css)
-  .replace('@@INCLUDE_JS@@', () => js);
+  .replace('@@INCLUDE_JS@@', () => jsFull);
 
 const used = new Set();
 const missing = [...new Set([...html.matchAll(/@@ASSET:([^@]+)@@/g)].map((m) => m[1]))].filter((p) => !existsSync(resolve(root, 'assets', p)));
