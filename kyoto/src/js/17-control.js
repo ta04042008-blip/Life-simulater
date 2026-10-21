@@ -10,7 +10,8 @@ function stop(){
   if(timer){
     clearTimeout(timer);timer=null;
     remaining=Math.max(0,tickMs-(Date.now()-tickStart));
-    setBar(1-remaining/SPEEDS[speedIdx][0],0);
+    S.quarterProgress=1-remaining/SPEEDS[speedIdx][0];
+    setBar(S.quarterProgress,0);
   }
   if(animT){clearInterval(animT);animT=null}
   seasonTimers.forEach(clearTimeout);seasonTimers=[];seasonOv=null;
@@ -22,23 +23,24 @@ function schedule(ms){
   timer=setTimeout(()=>{
     remaining=null;
     evT.forEach(clearTimeout);evT=[];flushSlots();
+    if(lifeBlocked()){resume=!!(S.decision||S.pendingResult);stop();render();return}
     frame++;tick();render();showFx();playSeasons();
-    if(S.decision||S.dead){resume=!!S.decision;stop();remaining=null;setBar(0,0);render();return}
+    if(lifeBlocked()){resume=!!(S.decision||S.pendingResult);stop();S.quarterProgress=0;remaining=null;setBar(0,0);render();return}
     slots=rollSlots();schedule(SPEEDS[speedIdx][0]);
   },ms);
 }
 function start(){
-  if(timer||S.decision||S.dead)return;
-  if(remaining==null)slots=rollSlots();
+  if(timer||lifeBlocked())return;
+  if(remaining==null){slots=rollSlots();if(S.quarterProgress)remaining=(1-S.quarterProgress)*SPEEDS[speedIdx][0]}
   schedule(remaining!=null?Math.max(50,remaining):SPEEDS[speedIdx][0]);
   animT=setInterval(()=>{frame++;drawScene()},600);
   render();
 }
 function step(n,untilDecision){
   stop();resume=false;remaining=null;setBar(0,0);
-  const go1=()=>{if(S.decision||S.dead)return false;slots=rollSlots();flushSlots();return tick()};
+  const go1=()=>{if(lifeBlocked())return false;slots=rollSlots();flushSlots();if(lifeBlocked())return false;return tick()};
   for(let i=0;i<n;i++){if(!go1())break;if(S.dead||(untilDecision&&S.decision))break}
-  if(untilDecision&&!S.decision&&!S.dead){let g=0;while(!S.decision&&!S.dead&&g++<400)go1()}
+  if(untilDecision&&!lifeBlocked()){let g=0;while(!lifeBlocked()&&g++<400)go1()}
   render();showFx();
 }
 function randomBirth(){                                    // 生まれ年を西暦1〜1900年からランダムに引き、その年の時代の境遇を重みで選ぶ

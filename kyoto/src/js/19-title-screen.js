@@ -38,9 +38,10 @@ $('adv1').onclick=()=>step(1);$('adv12').onclick=()=>step(S.mode==='q'?4:5);$('a
 $('newrand').onclick=()=>{const b=randomBirth();newLife(b.pid,b.year,true)};
 document.addEventListener('click',e=>{
   if(evMode&&!e.target.closest('[data-opt]')&&(e.target.closest('#evcard')||e.target.closest('.evback'))){evTap();return}
+  const action=e.target.closest('[data-action]');if(action){lifeAction(action.dataset.action);return}
   const pol=e.target.closest('[data-pol]');if(pol){S.policy=pol.dataset.pol;render();saveAutoSoon()}
   if(e.target.closest('#evbadok')&&S&&S.decision&&!evDecOk(S.decision)){addLog('c',`【イベントの不備】「${S.decision.title||'名称なし'}」に不備（${evDecWhy(S.decision)}）があり、結果を適用せずに中止した`,true);S.decision=null;evBanner();render();return}
-  const stc=e.target.closest('[data-stc]');if(stc){const why=stConfirm(stc.dataset.stc,stc.dataset.yes==='1');if(why)toast(why);render();saveAutoSoon();return}
+  const stc=e.target.closest('[data-stc]');if(stc){if(lifeBlocked())return;const why=stConfirm(stc.dataset.stc,stc.dataset.yes==='1');if(why)toast(why);render();saveAutoSoon();return}
   const op=e.target.closest('[data-opt]');if(op)choose(+op.dataset.opt);
   const p=e.target.closest('[data-p]');if(p&&birthMode==='select')newLife(p.dataset.p,undefined,false);
   const bm=e.target.closest('[data-bm]');if(bm){birthMode=bm.dataset.bm;render()}

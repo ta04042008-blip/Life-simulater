@@ -217,7 +217,7 @@ function render(){
   $('months').style.gridTemplateColumns=`repeat(${segs},1fr)`;
   $('months').innerHTML=Array.from({length:segs},(_,i)=>`<i class="${i<=on?'on':''}"></i>`).join('');
   $('play').innerHTML=timer?'■ 停止':'<span class="tri">▲</span> 再生';
-  $('play').disabled=!!S.decision||S.dead;
+  $('play').disabled=lifeBlocked();
   $('speed').textContent=SPEEDS[speedIdx][1];
   $('adv1').textContent=yq?'1期':'1年';$('adv12').textContent=yq?'1年':'5年';
   $('pname').textContent=nameOf();$('page').textContent=`${S.age}歳・${bandOf(S.age)}`;
@@ -234,7 +234,7 @@ function render(){
   $('recent').innerHTML=li(S.log.slice(0,6));
   $('ledger').innerHTML=li(S.log);
   renderMap();
-  stRender();stDevRender();
+  stRender();stDevRender();lifeActionsRender();
   syncEvent();
   document.querySelectorAll('#personas .chip').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.p===S.pid);b.disabled=birthMode==='random'});
   document.querySelectorAll('#bmode .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.bm===birthMode));

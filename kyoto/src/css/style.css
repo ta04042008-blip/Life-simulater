@@ -247,3 +247,15 @@ h2{font-size:16.67px;font-weight:400;color:var(--muted);margin:0;letter-spacing:
 .mapbar button{background:var(--panel);border:2px solid var(--line);min-width:44px;min-height:40px;font-size:13.33px;padding:0 8px}
 #scr-map .mapbar button{font-size:13.33px}
 
+
+/* 家計：収入と支出を縦に揃え、区切り線の下に差引を置く。 */
+.cashflow{margin:12px 0 18px;padding:14px 16px;background:var(--bg);border:2px solid var(--line)}
+.cashflow-caption{font-size:16.67px;color:var(--muted);margin-bottom:8px}
+.cashflow-row{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:baseline;padding:5px 0}
+.cashflow-row>b{text-align:right;overflow-wrap:anywhere;font-size:clamp(24px,7vw,34px);font-variant-numeric:tabular-nums;line-height:1.35}
+.cashflow-income{color:var(--good)}
+.cashflow-expense{color:var(--warn)}
+.cashflow-even{color:var(--ink)}
+.cashflow-total{border-top:3px solid var(--ink);margin-top:8px;padding-top:12px}
+.cashflow-total>b{font-size:clamp(28px,8vw,40px)}
+.cashflow .note{margin:10px 0 0}

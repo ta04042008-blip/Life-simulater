@@ -122,11 +122,13 @@ function stBuild(e,j,pi){
 /* 選択肢が選べるか（資源が足りない選択肢は選べない。勝手に借金にしない） */
 function stPreWhy(o){
   const st=o&&o.st;if(!st||!st.length)return '';
-  const need={fund:0,food:0,goods:0};
+  const need={fund:0,food:0,goods:0};let time=0;
   st.forEach(c=>{
     if(c.t==='rs'&&c.hard&&c.sg<0)need[c.a]+=c.n;
     else if(c.t==='ln')need.fund+=c.n;
+    else if(c.t==='tm')time+=c.n;
   });
+  if(time>frLeft())return '自由時間が足りない';
   if(need.fund>stAvail('fund'))return '資金が足りない';
   if(need.food>stAvail('food'))return '食料が足りない';
   if(need.goods>stAvail('goods'))return '物資が足りない';
