@@ -1,0 +1,20 @@
+import {BUILD,FIXDIR} from './lib.mjs';
+import {chromium} from './lib.mjs';
+const b=await chromium.launch();const p=await b.newPage({viewport:{width:375,height:760},deviceScaleFactor:2});
+const errs=[];p.on('pageerror',e=>errs.push(e.message));
+await p.addInitScript(()=>{window.__bth=1});
+await p.goto('file://'+BUILD);await p.waitForTimeout(800);
+await p.evaluate(()=>{const b=randomBirth();newLife(b.pid,b.year,true)});
+await p.waitForTimeout(1800);await p.screenshot({path:'shots/b1.png'});
+await p.waitForTimeout(9000);
+console.log('step',await p.evaluate(()=>document.querySelector('#bth')?.innerText.slice(0,80).replace(/\n/g,' | ')));
+await p.screenshot({path:'shots/b2.png'});
+await p.waitForTimeout(3500);await p.screenshot({path:'shots/b3.png'});
+console.log('step',await p.evaluate(()=>document.querySelector('#bth')?.innerText.slice(0,120).replace(/\n/g,' | ')));
+await p.click('#bok');await p.waitForTimeout(500);await p.screenshot({path:'shots/b4.png'});
+await p.fill('#bnm','はるか');await p.click('#bgo');await p.waitForTimeout(300);
+console.log('closed',await p.evaluate(()=>!document.querySelector('#bth')),await p.evaluate(()=>S.myName+' '+document.getElementById('pname').textContent));
+// skip
+await p.evaluate(()=>newLife('common',undefined,false));await p.waitForTimeout(500);await p.click('#bskip');
+console.log('skipped',await p.evaluate(()=>!document.querySelector('#bth')));
+console.log(errs);await b.close();

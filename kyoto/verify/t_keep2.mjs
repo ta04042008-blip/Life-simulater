@@ -1,0 +1,11 @@
+import {BUILD,FIXDIR} from './lib.mjs';
+import {chromium} from './lib.mjs';
+const b=await chromium.launch();const p=await b.newPage({viewport:{width:375,height:760}});
+const errs=[];p.on('pageerror',e=>errs.push(e.message));
+await p.goto('file://'+BUILD);await p.waitForTimeout(500);
+const r=await p.evaluate(async()=>{newGame('common',1000);go('life');S.age=13;S.t=13;S.nextDecT=13.1;speedIdx=3;start();go('map');
+  for(let i=0;i<40&&!S.decision;i++)await new Promise(r=>setTimeout(r,300));
+  const dec=!!S.decision,tm=!!timer;const openAway=!$('evwin').hidden;
+  go('life');await new Promise(r=>setTimeout(r,500));
+  return {dec,timerStopped:!tm,openAway,openBack:!$('evwin').hidden,age:S.age}});
+console.log(JSON.stringify(r),errs);await b.close();

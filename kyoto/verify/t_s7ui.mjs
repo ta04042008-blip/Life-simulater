@@ -1,0 +1,12 @@
+import {open} from './lib.mjs';
+const {browser,page,errs}=await open();
+await page.setViewportSize({width:375,height:667});
+await page.evaluate(()=>{newGame('common');S.age=25;S.mode='q';S.nextSmallT=1e9;S.nextDecT=1e9;S.ongoing=null;S.npc.forEach(n=>{n.known=true});
+  evFireAuto({evid:'E08-03'});S.policy='仕事';
+  const d=evBuild(EV_BY_ID['E08-10'],S.npc.findIndex(n=>n.rel==='家族'));S.decision=JSON.parse(JSON.stringify(d));choose(0);
+  const d2=evBuild(EV_BY_ID['E08-07']);S.decision=JSON.parse(JSON.stringify(d2));choose(0);
+  stMonths(1);render();go('home')});
+await page.waitForTimeout(300);
+await page.screenshot({path:'shots/s7_home.png',fullPage:true});
+console.log(await page.evaluate(()=>({sw:document.documentElement.scrollWidth,iw:innerWidth,t:$('home-body').innerText.replace(/\n/g,' / ').match(/健康・介助.{0,200}/)[0]})));
+console.log(errs);await browser.close();

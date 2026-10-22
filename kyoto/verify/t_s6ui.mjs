@@ -1,0 +1,12 @@
+import {open} from './lib.mjs';
+const {browser,page,errs}=await open();
+await page.setViewportSize({width:375,height:667});
+await page.evaluate(()=>{newGame('common');S.age=25;S.mode='q';S.nextSmallT=1e9;S.nextDecT=1e9;S.npc.forEach(n=>{n.known=true});
+  S.npc.push({name:'想い人（仮）',rel:'想い人',aff:80,from:null,known:true,off:0,skill:300,skillName:'x',dead:false,deadAge:null,hist:[],extra:{},fromText:null,...mkPerson(PERSONAS[S.pid],25)});stIds();
+  const pi=S.npc.length-1;const d=evBuild(EV_BY_ID['E04-08'],pi);S.decision=JSON.parse(JSON.stringify(d));choose(0);
+  const d2=evBuild(EV_BY_ID['E01-05']);S.decision=JSON.parse(JSON.stringify(d2));choose(1);
+  render();go('home')});
+await page.waitForTimeout(300);
+await page.screenshot({path:'shots/s6_home.png',fullPage:true});
+console.log(await page.evaluate(()=>({sw:document.documentElement.scrollWidth,iw:innerWidth,t:$('home-body').innerText.replace(/\n/g,' / ').slice(0,700)})));
+console.log(errs);await browser.close();
