@@ -91,7 +91,7 @@ test('all sample worlds complete bounded lives without non-finite stats or money
   for (const world of WORLDS) for (let seed = 1; seed <= 30; seed++) {
     const r = createRun(seed, world.id);
     let decisions = 0;
-    while (!r.dead) { nextDecision(r); if (r.pending) { chooseFree(r); decisions++; assert.ok(decisions <= 9); } }
+    while (!r.dead) { nextDecision(r); if (r.pending) { chooseFree(r); decisions++; assert.ok(decisions <= 12); } }
     assert.ok(r.tick <= MAX_AGE * 4); assert.ok(Number.isFinite(r.money));
     for (const s of STATS) assert.ok(r.stats[s.id] >= 0 && r.stats[s.id] <= 300);
     assert.deepEqual(restore(snapshot(r)), r);

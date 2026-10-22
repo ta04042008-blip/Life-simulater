@@ -49,6 +49,25 @@ test('application wires birth, pause, decisions, actions, funds, export and titl
   assert.equal(look.top, 'casual-1'); assert.equal(look.bottom, 'casual-2');
   assert.equal(stored.get('earth2000.run.v1'), beforeAppearance);
   assert.equal(state().tick, appearanceTick);
+  // Follow the new default Japan sample through the connected story using UI handlers.
+  click('close');
+  for (let n = 0; n < 15 && state().workStory.stage !== 'reflection'; n++) {
+    click('skip');
+    const pending = state().pending; assert.ok(pending);
+    if (pending.stage === 'priority') {
+      assert.match(sheetRoot.innerHTML, /働き方と、人との時間/);
+      click('choose', { id: 'people', decision: pending.id });
+    } else click('choose', { id: pending.stage === 'meeting' ? 'talk' : pending.options[0].id, decision: pending.id });
+  }
+  assert.equal(state().workStory.stage, 'reflection');
+  click('menu', { panel: 'people' }); assert.match(sheetRoot.innerHTML, /仕事仲間/);
+  click('menu', { panel: 'finance' }); assert.match(sheetRoot.innerHTML, /人と過ごす時間を確保/);
+  click('close'); click('skip');
+  assert.match(sheetRoot.innerHTML, /あの選択から、三年/);
+  const reflection = state().pending;
+  click('choose', { id: 'continue', decision: reflection.id });
+  assert.equal(state().workStory.stage, 'complete');
+  click('menu', { panel: 'records' }); assert.match(sheetRoot.innerHTML, /収入の一部を手放し/);
   click('menu', { panel: 'settings' }); click('export'); assert.ok(downloaded);
   click('title'); assert.match(app.innerHTML, /つづきの人生へ/);
   click('continue'); assert.match(app.innerHTML, /現在の生活方針/);
