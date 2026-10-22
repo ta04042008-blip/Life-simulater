@@ -1,3 +1,4 @@
+import { newWorkStory, beginWorkStory, workStoryDecision, resolveWorkStory, workStoryLoad, validWorkStory } from './life-story.js';
 import { ACTIONS, DATA_VERSION, FOCUSES, MILESTONES, STATS, WORLDS, decisionFor, focusOptions, worldOf } from './data.js';
 
 export const SAVE_VERSION = 1;
@@ -22,6 +23,7 @@ export function createRun(seed, worldId) {
     worldId: worldId || WORLDS[seed % WORLDS.length].id, birthYear: 0, name: '', stats: { health: 245, fitness: 16, composure: 190, knowledge: 8, connections: 170, happiness: 195 },
     money: 25, focus: 'balance', focusTime: Object.fromEntries(FOCUSES.map(f => [f.id, 0])), job: null, experience: 0, role: '一人前を目指して', incomeFactor: 1, reduced: false,
     education: '暮らしの中で成長中', hobby: null, fatigue: 0, housing: '家族と暮らす住まい', food: '食事は足りている', people: [], actions: [], log: [], history: [], ledger: [], memories: [], completedMilestones: [], pending: null, dead: false, death: null };
+  if (run.worldId === 'modern') run.workStory = newWorkStory();
   const world = worldOf(run);
   if (!world) throw new Error('Unknown world');
   run.birthYear = world.year;
@@ -70,6 +72,7 @@ function finishActions(run) {
     if (action.type === 'apply') {
       if (random(run) < .62 + Math.min(run.experience / 150, .2)) {
         run.job = worldOf(run).occupation; run.incomeFactor = Math.max(run.incomeFactor, 1.15);
+        beginWorkStory(run);
         text = '仕事の機会が見つかった。経験を活かして、新しい役割を始める。';
       } else text = '今回は仕事の縁につながらなかった。今の暮らしは続き、また機会を探せる。';
     } else if (action.type === 'visit') {
@@ -93,6 +96,11 @@ export function resolveDecision(run, optionId, decisionId) {
   for (const key of ['job', 'education', 'hobby', 'focus']) if (option[key]) run[key] = option[key];
   if (option.promotion) { run.role = '経験を活かす担い手'; run.incomeFactor += .2; }
   if (option.reduced) { run.reduced = true; run.incomeFactor *= .65; run.role = '自分のペースで'; }
+  if (run.pending.story === 'work') {
+    if (run.workStory.stage === 'reflection') log(run, run.pending.text, '仕事と出会い', '♧');
+    resolveWorkStory(run, optionId);
+  }
+  beginWorkStory(run);
   if (option.partner) {
     run.people.push({ id: 'partner', name: '大切な人', relation: '共に暮らす相手', birthYear: run.birthYear + 1, trust: 72, alive: true, lastContact: run.tick });
     run.housing = '大切な人と暮らす住まい';
@@ -137,6 +145,7 @@ export function step(run) {
   const age = run.tick / 4;
   const focus = FOCUSES.find(f => f.id === run.focus);
   const world = worldOf(run);
+  const storyLoad = workStoryLoad(run);
   const actionLoad = run.actions.length * .12;
   const available = clamp((run.job && !run.reduced ? .72 : 1) - actionLoad - run.fatigue / 300, .15, 1);
   run.focusTime[run.focus] += .25;
@@ -145,13 +154,22 @@ export function step(run) {
   // Exponential quarter-step convergence does not multiply annual gains by UI ticks.
   for (const [key, target] of [['happiness', 180], ['composure', 180]]) run.stats[key] = clamp(target + (run.stats[key] - target) * Math.pow(.94, .25), 0, 300);
   run.fatigue = clamp(run.fatigue + (run.focus === 'work' ? 2 : run.focus === 'rest' ? -3 : -.4), 0, 100);
+  if (run.job) {
+    run.fatigue = clamp(run.fatigue + storyLoad.fatigue, 0, 100);
+    run.experience += storyLoad.experience;
+    const coworker = run.people.find(p => p.id === 'coworker' && p.alive);
+    if (coworker && storyLoad.trust) {
+      coworker.trust = clamp(coworker.trust + storyLoad.trust, 0, 100);
+      if (storyLoad.trust > 0) coworker.lastContact = run.tick + 1;
+    }
+  }
   if (run.job) run.experience += .25 * (run.focus === 'work' ? 1.2 : 1) * (run.reduced ? .65 : 1);
   if (run.focus === 'family' || run.focus === 'social') {
-    const candidates = run.people.filter(p => p.alive && (run.focus !== 'family' || p.relation !== '友人'));
+    const candidates = run.people.filter(p => p.alive && (run.focus !== 'family' || ['家族', '共に暮らす相手'].includes(p.relation)));
     if (candidates.length) candidates[run.tick % candidates.length].trust = clamp(candidates[run.tick % candidates.length].trust + .5 * available, 0, 100);
   }
   if (run.job) {
-    const gross = world.income * run.incomeFactor * (1 + Math.min(run.experience, 35) * .008) / 4;
+    const gross = world.income * run.incomeFactor * storyLoad.income * (1 + Math.min(run.experience, 35) * .008) / 4;
     const normal = world.baseCost * (run.people.some(p => p.id === 'partner' && p.alive) ? 1.18 : 1) / 4;
     const net = gross - normal;
     run.money += net;
@@ -165,6 +183,7 @@ export function step(run) {
     annual(run);
     run.history.push({ age: run.tick / 4, stats: { ...run.stats }, money: run.money });
   }
+  if (!run.dead && !run.pending) run.pending = workStoryDecision(run);
   return true;
 }
 export function nextDecision(run) {
@@ -188,7 +207,11 @@ export function restore(value) {
   if (r.log.some(e => !e || typeof e.id !== 'string' || typeof e.text !== 'string' || typeof e.category !== 'string' || typeof e.icon !== 'string' || !finite(e.tick) || !finite(e.age) || !finite(e.year)) || r.history.some(h => !h || !finite(h.age) || !finite(h.money) || !STATS.every(s => finite(h.stats?.[s.id]))) || r.ledger.some(l => !l || !finite(l.tick) || !finite(l.amount) || typeof l.text !== 'string') || r.memories.some(m => !m || !finite(m.tick) || typeof m.text !== 'string')) throw new Error('履歴の形式を確認できません。');
   if (r.actions.some(a => !ACTIONS.some(d => d.id === a.type) || !finite(a.due) || a.due <= r.tick) || r.people.some(p => typeof p.id !== 'string' || typeof p.name !== 'string' || !finite(p.trust) || !finite(p.birthYear) || typeof p.alive !== 'boolean')) throw new Error('進行中の情報を確認できません。');
   if (r.pending && (r.dead || !Array.isArray(r.pending.options) || !r.pending.options.length || typeof r.pending.id !== 'string' || r.pending.options.some(o => typeof o.id !== 'string' || typeof o.name !== 'string' || !finite(o.cost) || o.cost < 0 || !o.effects || Object.values(o.effects).some(n => !finite(n))))) throw new Error('決断の情報を確認できません。');
-  if (r.pending) {
+  if (!validWorkStory(r)) throw new Error('仕事と出会いの記録を確認できません。');
+  if (r.pending?.story === 'work') {
+    const expected = workStoryDecision(r);
+    if (!expected || JSON.stringify(expected) !== JSON.stringify(r.pending)) throw new Error('仕事の決断がこの版の内容と一致しません。');
+  } else if (r.pending) {
     const expected = { ...decisionFor(r.pending.age, r), id: `${r.id}-d${r.pending.age}`, age: r.pending.age };
     if (!MILESTONES.includes(r.pending.age) || r.pending.age !== r.tick / 4 || JSON.stringify(expected) !== JSON.stringify(r.pending)) throw new Error('決断がこの版の内容と一致しません。');
   }
