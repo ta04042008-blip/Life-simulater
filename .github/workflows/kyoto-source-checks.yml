@@ -1,0 +1,69 @@
+name: Kyoto source checks
+
+on:
+  push:
+    branches:
+      - develop
+      - 'fix/**'
+      - 'feat/**'
+  pull_request:
+    branches:
+      - develop
+      - main
+
+concurrency:
+  group: kyoto-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Legacy prototype and asset-free Kyoto regression tests
+        run: npm test
+      - name: Legacy JavaScript syntax check
+        run: npm run check
+      - name: Build Kyoto standalone HTML from registered assets
+        run: npm run kyoto:build
+      - name: Kyoto JavaScript syntax, ordering and dist consistency check
+        run: npm run kyoto:check
+      - name: Keep the committed Kyoto HTML synchronized on branch pushes
+        if: github.event_name == 'push'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add kyoto/dist/kyoto.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Build Kyoto standalone HTML from verified sources"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+      # Browser/Playwright visual tests are separate from these Node-based checks.
+
+  browser-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install test-only browser harness
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Build Kyoto standalone HTML
+        run: npm run kyoto:build
+      - name: Run Kyoto browser regression suite
+        env:
+          PLAYWRIGHT_DIR: ${{ github.workspace }}/kyoto/verify/lib.mjs
+        run: npm run kyoto:verify

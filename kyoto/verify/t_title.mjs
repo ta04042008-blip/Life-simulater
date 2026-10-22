@@ -1,0 +1,22 @@
+import {BUILD,FIXDIR} from './lib.mjs';
+import {chromium} from './lib.mjs';
+const b=await chromium.launch();const p=await b.newPage({viewport:{width:375,height:760},deviceScaleFactor:2});
+const errs=[];p.on('pageerror',e=>errs.push(e.message));
+await p.addInitScript(()=>{window.__ttl=1;window.__bth=1});
+await p.goto('file://'+BUILD);await p.waitForTimeout(800);
+console.log('title',await p.evaluate(()=>!!document.getElementById('ttl')),await p.evaluate(()=>!!document.getElementById('tcont')));
+await p.screenshot({path:'shots/t1.png'});
+await p.click('#tsel');await p.waitForTimeout(200);await p.screenshot({path:'shots/t2.png'});
+await p.click('[data-tp="m80d"]');await p.waitForTimeout(500);
+console.log('after select',await p.evaluate(()=>[!document.getElementById('ttl'),!!document.getElementById('bth'),S.pid]));
+await p.click('#bskip');
+// save then back to title: continue appears
+await p.evaluate(()=>{document.getElementById('save').click()});
+await p.evaluate(()=>{go('menu');document.getElementById('totitle').click()});await p.waitForTimeout(300);
+console.log('cont',await p.evaluate(()=>!!document.getElementById('tcont')));
+await p.click('#tcont');await p.waitForTimeout(500);
+console.log('loaded',await p.evaluate(()=>[!document.getElementById('ttl'),S.pid,document.getElementById('toast').textContent]));
+await p.evaluate(()=>{document.getElementById('totitle').click()});await p.waitForTimeout(200);
+await p.click('#tgo');await p.waitForTimeout(500);
+console.log('start',await p.evaluate(()=>[!document.getElementById('ttl'),!!document.getElementById('bth')]));
+console.log(errs);await b.close();
