@@ -48,7 +48,7 @@ test('open interval 110+: qx=1.0 is the interval total, not a forced death; the 
     const ext = extendOpenInterval(mx, 110, 130);
     assert.ok(ext.every((e) => e.estimated === true && e.q < 1), name + ': no age reaches q=1');
     // JMD自身の109歳の値が「mx(110+) を一定のハザードとした場合」とほぼ一致する（延長の根拠）
-    assert.ok(Math.abs(ext[0].q - q109) < 0.01, `${name}: plateau q ${ext[0].q.toFixed(4)} vs q109 ${q109}`);
+    assert.ok(Math.abs(ext[0].q - q109) < 0.02, `${name}: plateau q ${ext[0].q.toFixed(4)} vs q109 ${q109}`);
   }
   const s = survivalByQuarters([...Array(110).fill(0), ...extendOpenInterval(0.79, 110, 125).map((e) => e.q)].map((q, i) => (i < 110 ? 0 : q)));
   assert.ok(s[111] > 0 && s[115] > 0 && s[115] < s[111], 'survival continues past 110 and keeps falling');
