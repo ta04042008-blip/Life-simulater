@@ -16,7 +16,7 @@ const errs = []; p.on('pageerror', (e) => errs.push(e.message));
 try {
   await p.goto(`http://localhost:${port}/`); await p.waitForSelector('#g-life', { timeout: 30000 });
   ok('起動：変更0件', (await p.textContent('#st-chg')) === '変更 0件');
-  await p.fill('#f-life-0-0', '70');
+  await p.fill('#f-life-0-0', '3');
   ok('数値を変えると変更1件・朱線', (await p.textContent('#st-chg')) === '変更 1件' && (await p.getAttribute('#f-life-0', 'class')).includes('changed'));
   await p.fill('#f-fam-1-0', '50');
   ok('合計100でないと誤り', (await p.textContent('#f-fam-1 .msg')).includes('合計を100') && (await p.textContent('#st-save')).startsWith('誤り'));
@@ -37,7 +37,7 @@ try {
   await p.selectOption('#sim-n', '100'); await p.click('#sim-start');
   await p.waitForFunction(() => /計算しました|失敗/.test(document.querySelector('#sim-note').textContent), null, { timeout: 180000 });
   const m = (await p.$$eval('.kv', (e) => e[0].textContent.match(/いちばん長生き(\d+)歳(\d+)歳/)))?.slice(1).map(Number);
-  ok('まとめて試す：高齢の死亡の起点を大きくすると寿命が下がり、既定と比べられる（寿命の上限という項目は無い）', m && m[0] < m[1] && !(await p.evaluate(() => document.body.innerText.includes('寿命の上限'))), String(m));
+  ok('まとめて試す：死亡率の倍率を大きくすると寿命が下がり、既定と比べられる（寿命の上限という項目は無い）', m && m[0] < m[1] && !(await p.evaluate(() => document.body.innerText.includes('寿命の上限'))), String(m));
   ok('横にはみ出さない', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 } finally { await b.close(); srv.close(); }
 ok('エラーなし', errs.length === 0, errs.join(' / '));

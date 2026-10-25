@@ -69,6 +69,7 @@ function tickQ(){
   popQ=[];lastBubble=null;
   // calendar
   let bday=false;
+  const lq=S.q>3?3:S.q,ly=S.year,la0=S.age;   // 今から終える3か月：四半期の番号・暦年・年齢（誕生日をまたぐ前の値）
   S.q++;S.t+=0.25;if(S.q>3){S.q=0;S.year++;S.age++;bday=true}
   if(bday){
     const was=bandOf(S.age-1),now=bandOf(S.age);
@@ -108,7 +109,7 @@ function tickQ(){
     const a=S.age+n.off;
     if(a<0)return;                       // まだ生まれていない弟妹
     npcLife(n,a,yrs,yq);                 // 自分なりの活動・★・気質の変化（主人公の選択とは別）
-    const hz=annualHazard(a,NPC_STAM_LINK?n.stats[0]:clamp(560-Math.max(0,a-35)*5,150,600),null);
+    const la=bday?a-1:a;if(la<0)return;const hz=annualHazard(la,NPC_STAM_LINK?n.stats[0]:clamp(560-Math.max(0,la-35)*5,150,600),null,la===0?lq:null,ly,'npc');   // 判定は「今終えた3か月」の年齢・暦年・四半期で行う
     if(rand()<1-Math.exp(-hz.tot*yrs)){
       n.dead=true;n.deadAge=a;
       if(n.known){
@@ -146,8 +147,8 @@ function tickQ(){
   }
   stHlSync();
   // death (age-based hazard, raised by low stamina, illness and accidents)
-  const h=annualHazard(S.age,S.stats[0],S.ongoing);
-  if(rand()<1-Math.exp(-h.tot*yrs)){die(h);saveAutoSoon();return true}
+  const h=annualHazard(la0,S.stats[0],S.ongoing,la0===0?lq:null,ly);
+  if(rand()<1-Math.exp(-h.tot*yrs)){die(h,la0);saveAutoSoon();return true}
   // decision
   if(S.age>=13&&S.t>=S.nextDecT){
     let d=rand()<0.85?evPick('b'):null;       // 設計案の大きな選択（なければ従来の決断）

@@ -23,7 +23,7 @@ const R = await page.evaluate(() => {
   out.T01 = { y1: personaIn(1), y2025: personaIn(2025) };
   // T02 20か国版
   out.T02 = { countries: typeof COUNTRY !== 'undefined' };
-  const quiet = () => { const sv = { ...HZ }; HZ.B = 0; HZ.child = 0; HZ.acc = 0; HZ.illMult = 1; HZ.sevMult = 1; return () => Object.assign(HZ, sv); };
+  const quiet = () => { const sv = { ...HZ }; HZ.scale = 0; HZ.illMult = 1; HZ.sevMult = 1; return () => Object.assign(HZ, sv); };
   // T03 年齢境界の送り幅（死亡確率を止め、決断には先頭の選択肢で答え、境目から始まった1回分だけを測る）
   { const back = quiet(); const at = {};
     for (const [pid, yr] of [['m90c', 1990], ['common', 1000]]) { newGame(pid, yr); let g = 0;
@@ -43,8 +43,8 @@ const R = await page.evaluate(() => {
     { const back = quiet(); newGame('common', 1000); let g = 0;                    // c. 4〜5歳で期限が来た小さな選択は、年の途中でも時間を止めて出る
       while (S.age < 4 && g++ < 20) tick(); S.nextSmallT = S.t + 0.5; const t0 = S.t; tick();
       R4.smallChoiceMidYear = { appeared: !!S.decision, elapsedYears: +(S.t - t0).toFixed(2), expected: 0.5 }; back(); }
-    { newGame('common', 1000); HZ.child = 1e6; tick();                            // d. 乳児の死亡は、その四半期で確定して止まる（年末まで進めない）
-      R4.deathMidYear = { dead: S.dead, t: S.t }; HZ.child = 0.03; }
+    { newGame('common', 1000); HZ.scale = 1e6; tick();                            // d. 乳児の死亡は、その四半期で確定して止まる（年末まで進めない）
+      R4.deathMidYear = { dead: S.dead, t: S.t }; HZ.scale = 1; }
     out.T04 = R4; }
   // T05 選択中の時間停止・保存復元・二重回答
   { newGame('m90c', 1990); let g = 0; while (!S.dead && !S.decision && g++ < 800) tick();
@@ -63,10 +63,10 @@ const R = await page.evaluate(() => {
     const snapD = JSON.stringify(S); const rep = () => { S = migrate(JSON.parse(snapD)); slots = []; choose(0); let k = 0; while (!S.dead && k++ < 60) { if (S.decision) { choose(0); continue } slotsEnsure(); flushSlots(); tick(); } return JSON.stringify(S); };
     out.T05.reproducible = rep() === rep(); }
   // T06 死亡の確定が一度きり
-  { newGame('m90c', 1990); HZ.child = 5; let g = 0; while (!S.dead && g++ < 50) { if (S.decision) { choose(0); continue } tick(); }
+  { newGame('m90c', 1990); HZ.scale = 1e6; let g = 0; while (!S.dead && g++ < 50) { if (S.decision) { choose(0); continue } tick(); }
     const age = S.deathAge, logs = S.log.length; const again = tick(); const logs2 = S.log.length;
     out.T06 = { dead: S.dead, tickAfterDeath: again, deathAgeKept: age === S.deathAge, logUnchanged: logs === logs2, deathLogCount: S.log.filter((l) => /歳で亡くなった。（死因/.test(JSON.stringify(l))).length };
-    HZ.child = 0.03;
+    HZ.scale = 1;
     newGame('common', 1000); let g3 = 0; while (!S.dead && S.age < 30 && g3++ < 2000) { if (S.decision) { choose(0); continue } slotsEnsure(); flushSlots(); tick(); }
     const snapA = JSON.stringify(S); const dd = []; for (let k = 0; k < 3; k++) { S = migrate(JSON.parse(snapA)); slots = []; let h = 0; while (!S.dead && h++ < 3000) { if (S.decision) { choose(0); continue } slotsEnsure(); flushSlots(); tick(); } dd.push([S.deathAge, S.cause]); }
     out.T06.sameDeathFromSameSave = dd.every((x) => JSON.stringify(x) === JSON.stringify(dd[0])); }
@@ -90,9 +90,9 @@ const R = await page.evaluate(() => {
   { const steps = play('common', 1000, 40); const bad = steps.filter(([a, d, m]) => Math.round(d * 12) !== m);
     out.T11 = { stepsChecked: steps.length, monthMismatch: bad.length }; }
   // T12 高齢・早世
-  { const sv = { ...HZ }; HZ.B = 0; HZ.child = 0; HZ.acc = 0; play('common', 1000, 130); const old = { deathAge: S.dead ? S.deathAge : null, cause: S.cause, ageNow: S.age, dead: S.dead }; Object.assign(HZ, sv);
-    HZ.child = 5; newGame('common', 1000); let g = 0; while (!S.dead && g++ < 50) { if (S.decision) { choose(0); continue } tick(); }
-    out.T12 = { zeroHazardDeath: old, earlyDeathAge: S.deathAge, chron: Array.isArray(S.chron) }; HZ.child = 0.03; }
+  { const sv = { ...HZ }; HZ.scale = 0; play('common', 1000, 130); const old = { deathAge: S.dead ? S.deathAge : null, cause: S.cause, ageNow: S.age, dead: S.dead }; Object.assign(HZ, sv);
+    HZ.scale = 1e6; newGame('common', 1000); let g = 0; while (!S.dead && g++ < 50) { if (S.decision) { choose(0); continue } tick(); }
+    out.T12 = { zeroHazardDeath: old, earlyDeathAge: S.deathAge, chron: Array.isArray(S.chron) }; HZ.scale = 1; }
   return out;
 });
 

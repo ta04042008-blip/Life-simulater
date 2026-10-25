@@ -211,12 +211,8 @@ function clearFilter(kind){
 function numSchema(){
   const st=META.stats, pol=META.policies;
   return [
-  {id:'life',title:'寿命と死亡',intro:'毎年、亡くなる確率＝「高齢の分×体力の補正×病気の倍率」＋「乳幼児の分」＋「事故」。境遇による直接の補正はありません。',fields:[
-    {path:['HZ','B'],shape:'n',label:'高齢による死亡の起点',unit:'10万分の1',scale:1e5,min:0,max:100,step:0.1,help:'0歳時点の「高齢の分」の大きさ。大きいほど全体に早く亡くなります。'},
-    {path:['HZ','k'],shape:'n',label:'年齢による増え方',min:0,max:0.3,step:0.005,help:'1歳ごとに「高齢の分」が約 e^値 倍になります（0.09なら1年で約1.09倍、10年で約2.5倍）。'},
-    {path:['HZ','child'],shape:'n',label:'0歳の死亡率のもと',unit:'%',scale:100,min:0,max:50,step:0.1,help:'乳幼児の分の0歳での大きさ。'},
-    {path:['HZ','childDecay'],shape:'n',label:'乳幼児の死亡率の下がり方',min:0,max:5,step:0.05,help:'大きいほど、1歳・2歳…と急に下がります。'},
-    {path:['HZ','acc'],shape:'n',label:'事故で亡くなる確率',unit:'%（1年あたり）',scale:100,min:0,max:5,step:0.01},
+  {id:'life',title:'寿命と死亡',intro:'亡くなる確率は、生まれた年・年齢ごとの「全死因の年間死亡確率」の表が基準です。体力や病気はその平均が変わらないように割り戻して反映するので、事故や病気を二重に足すことはありません。境遇による直接の補正はありません。',fields:[
+    {path:['HZ','scale'],shape:'n',label:'死亡率の倍率',unit:'倍',min:0,max:20,step:0.05,help:'1が標準です。年齢ごとの死亡確率の表（1947〜2024年は日本版死亡データベースの実データ、それ以前は暫定推定）全体に掛けます。大きいほど早く亡くなります。'},
     {path:['HZ','illMult'],shape:'n',label:'病気（風邪）の間の倍率',unit:'倍',min:1,max:20,step:0.1},
     {path:['HZ','sevMult'],shape:'n',label:'重い病の間の倍率',unit:'倍',min:1,max:50,step:0.1}]},
   {id:'fam',title:'家族と時間の進み方',intro:'誕生時の家族の決まり方と、時間の進む単位・速さ。',fields:[

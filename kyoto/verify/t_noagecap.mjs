@@ -4,7 +4,7 @@ const { browser, page, errs } = await open();
 const out = []; const T = (name, ok, note = '') => { out.push(ok); console.log((ok ? 'PASS ' : 'FAIL ') + name + (note ? '  — ' + note : '')); };
 
 const r = await page.evaluate(() => {
-  const sv = { ...HZ }; HZ.B = 0; HZ.child = 0; HZ.acc = 0;       // 死亡確率ゼロ：年齢だけで死なないことを見る
+  const sv = { ...HZ }; HZ.scale = 0;       // 死亡確率ゼロ：年齢だけで死なないことを見る
   const go = () => { if (S.decision) { choose(0); if (S.decision) S.decision = null; return } slotsEnsure(); flushSlots(); tick(); };
   newGame('common', 1950); S.switchAge = 24; let g = 0, at110 = null, at111 = null;
   while (!S.dead && S.age < 150 && g++ < 12000) { go(); if (at110 === null && S.age >= 110) at110 = { dead: S.dead, age: S.age }; if (at111 === null && S.age >= 111) at111 = { dead: S.dead, age: S.age }; }

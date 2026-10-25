@@ -68,15 +68,15 @@ function eventPool(){
   else pool=pool.concat(GEN.elder,GEN.elder,FAMEV.elder,FAMEV.adult,TMEV);
   return pool.concat(evAutoPool());
 }
-function causeOf(h){
-  const base=h.old*h.mb+h.kid,ill=S.ongoing?h.old*h.mb*(h.mi-1)+h.kid*(h.mi-1)*0.4:0;
-  const r=rand()*(h.acc+base+ill);
+function causeOf(h,age){
+  const r=rand()*h.tot;                                  // 死因は、同じ全死因の確率を事故・病気・その他に分けて表示するだけ（合計は変えない）
   if(r<h.acc)return '事故';
-  if(r<h.acc+ill)return S.ongoing.name==='風邪'?'風邪をこじらせて':'重い病';
-  return S.age<6?'幼くして病':S.age>=65?'老衰':'体力の衰え・病';
+  if(r<h.acc+h.ill)return S.ongoing&&S.ongoing.name==='風邪'?'風邪をこじらせて':'重い病';
+  return age<6?'幼くして病':age>=65?'老衰':'体力の衰え・病';
 }
-function die(h){
-  S.dead=true;S.deathAge=S.age;S.cause=causeOf(h);S.decision=null;
-  addLog('k',`${S.age}歳で亡くなった。（死因：${S.cause}）`,true);
+function die(h,la){                                       // la＝亡くなった3か月を生きていた年齢（誕生日の直前の3か月なら、画面の年齢より1つ小さい）
+  const ag=la==null?S.age:la;
+  S.dead=true;S.deathAge=ag;S.cause=causeOf(h,ag);S.decision=null;
+  addLog('k',`${ag}歳で亡くなった。（死因：${S.cause}）`,true);
   lastBubble='…';
 }

@@ -1,6 +1,8 @@
 [
  "00-assets.js",
  "01-core-personas.js",
+ "01a-mortality-data.js",
+ "01b-mortality.js",
  "02-abilities-temperament.js",
  "03-family-learning-events.js",
  "04-names-family.js",

@@ -25,8 +25,8 @@ try {
   ok('複数語はAND（0件で案内）', (await vis()) === 0 && !(await p.$eval('#fempty', (e) => e.hidden)));
   await p.fill('#fq', '');
   ok('空に戻すと全件', (await vis()) === total && (await p.$eval('#fempty', (e) => e.hidden)));
-  await p.fill('#fq', '０歳'); const nz = await vis();
-  await p.fill('#fq', '0歳'); const nh = await vis();
+  await p.fill('#fq', '１９４７'); const nz = await vis();
+  await p.fill('#fq', '1947'); const nh = await vis();
   ok('全角・半角・大小を区別しない', nz === nh && nz > 0, `${nz}/${nh}`);
   await p.fill('#fq', '');
   await p.selectOption('#fsel', 'life');
@@ -35,7 +35,7 @@ try {
   await p.selectOption('#fsel', '');
   ok('変えた項目だけ：最初は0件', (await p.check('#fchg'), (await vis()) === 0));
   await p.uncheck('#fchg');
-  await p.fill('#f-life-0-0', '70');
+  await p.fill('#f-life-0-0', '3');
   await p.check('#fchg');
   ok('変えた項目だけ：変えた1件', (await vis()) === 1);
   await p.uncheck('#fchg'); await p.fill('#f-fam-1-0', '50'); await p.check('#fbad');

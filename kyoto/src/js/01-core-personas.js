@@ -4,16 +4,11 @@ const QL=['春','夏','秋','冬'];
 const BANDS=[[0,'幼児期'],[6,'学童期'],[13,'若年期'],[30,'壮年期'],[60,'高齢期']];
 const bandOf=a=>{let b=BANDS[0][1];for(const [m,n] of BANDS)if(a>=m)b=n;return b};
 const BIRTH_MAX=2025;                   // 出生年は西暦1〜2025年から完全に均等に引く（2026年以降は未実装）
-// 寿命に年齢の上限は設けない（死は死亡率だけで決まる）。死亡率の数値は単位4で資料調査と利用者の判断を経て確定するまで【仮】
-const HZ={B:1.5e-5,k:0.09,child:0.03,childDecay:1.1,acc:0.0015,illMult:3,sevMult:6}; // すべて仮の数値
+// 寿命に年齢の上限は設けない（死は死亡率だけで決まる）。年齢別の死亡確率は 01a/01b（1947〜2024年は JMD の実データ、それ以前は暫定推定）
+const HZ={scale:1,illMult:3,sevMult:6};   // scale＝死亡率の倍率(設計用・1が標準)。illMult/sevMult＝病気・重い病の間の死亡の倍率（ゲーム仮定）
 const RANDW={aristocrat:5,common:45,farm:35,artisan:15};                              // 仮の確率
-function annualHazard(age,v,ill){
-  const old=HZ.B*Math.exp(HZ.k*age),kid=HZ.child*Math.exp(-HZ.childDecay*age);
-  const mb=clamp(1+(500-v)/400,0.6,3);                 // 体力が低いほど上がる
-  const mi=ill?ill.mult:1;                              // 病気の最中
-  const base=old+kid;
-  return {base,old,kid,mb,mi,acc:HZ.acc,tot:old*mb*mi+kid*(1+(mi-1)*0.4)+HZ.acc};
-}
+// age=その3か月を生きた年齢, v=体力, ill=病気, year=暦年(省略時は今の年), qi=0歳のときの四半期の番号(省略時は一様)
+function annualHazard(age,v,ill,qi,year,kind){return mortHazard(age,year==null?S.year:year,v,ill,qi,kind)}
 const STAT=[['体力','--s-body'],['知識','--s-know'],['意欲','--s-will'],['魅力','--s-charm']];
 const POLICIES={
   '学び':[-1,5,1,0],'仕事':[3,2,-1,0],'交流':[0,1,2,4],'家族':[1,0,3,1],'休養':[5,0,2,0]
