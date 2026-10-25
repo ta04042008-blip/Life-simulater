@@ -52,11 +52,11 @@ function newGame(pid,year){
   evHide();
   const P=PERSONAS[pid],me=mkPerson(P,0);
   if(year==null)year=P.yr[0]+rnd(P.yr[1]-P.yr[0]);      // 生まれ年：境遇の時代の中でランダム     // 出生時の能力・★・気質を、ここで一度だけ抽選する
-  S={pid,ver:5,year,era:eraText(year),q:0,age:0,t:0,mode:'q',switchAge:SWITCH_AGE[0]+rnd(SWITCH_AGE[1]-SWITCH_AGE[0]+1),policy:'交流',
+  S={pid,ver:5,year,era:eraText(year),q:0,age:0,t:0,mode:stepMonths(0)>=12?'y':'q',sm:stepMonths(0),switchAge:SWITCH_AGE[0]+rnd(SWITCH_AGE[1]-SWITCH_AGE[0]+1),policy:'交流',
      stats:me.stats,tgt:me.tgt,star:me.star,sx:me.sx,tm:me.tm,
      skill:0,
      npc:P.npc.map((n,i)=>({name:n[0],rel:n[1],aff:n[2],from:n[3],known:n[3]===0,off:NPCOFF[pid][i],skill:NPCSK[pid][i],skillName:NPCSKN[pid][i],dead:false,deadAge:null,hist:[],extra:{},...mkPerson(P,NPCOFF[pid][i])})),
-     log:[],chron:[],pending:[],evSeen:{},ongoing:null,decision:null,decCount:0,nextDecT:13+rnd(3),nextSmallT:4+Math.random()*2,smallLast:-1,dead:false,deathAge:null,cause:null,orphan:false};
+     log:[],chron:[],pending:[],evSeen:{},ongoing:null,decision:null,decCount:0,nextDecT:13+rnd(3),nextSmallT:TIME.SMALL_FROM_AGE+Math.random()*2,smallLast:-1,dead:false,deathAge:null,cause:null,orphan:false};
   S.npc.push(...makeFamily(pid));
   nameNpcs(S);
   stNew(S);

@@ -209,17 +209,17 @@ function showFx(){
   popQ=[];lastBubble=null;
 }
 function render(){
-  const P=PERSONAS[S.pid],yq=S.mode==='q';
+  const P=PERSONAS[S.pid],sm=S.sm||stepMonths(S.age),yq=sm<12;
   $('ym').textContent=dateLabel();
   evBanner();
-  $('elapsed').textContent=`経過 ${Math.floor(S.t)}年（${yq?'四半期':'1年'}ごとに進行）`;
-  const segs=yq?4:11,on=yq?S.q:Math.floor(S.age/10);
+  $('elapsed').textContent=`経過 ${Math.floor(S.t)}年（${sm===3?'3か月':sm===6?'半年':'1年'}ごとに進行）`;
+  const segs=yq?4:11,on=yq?S.q:Math.floor(S.age/10);   // 1年未満ごとの間は1年の四季の位置、1年ごとの間は年代の位置
   $('months').style.gridTemplateColumns=`repeat(${segs},1fr)`;
   $('months').innerHTML=Array.from({length:segs},(_,i)=>`<i class="${i<=on?'on':''}"></i>`).join('');
   $('play').innerHTML=timer?'■ 停止':'<span class="tri">▲</span> 再生';
   $('play').disabled=!!S.decision||S.dead;
   $('speed').textContent=SPEEDS[speedIdx][1];
-  $('adv1').textContent=yq?'1期':'1年';$('adv12').textContent=yq?'1年':'5年';
+  $('adv1').textContent=sm===3?'1期':sm===6?'半年':'1年';$('adv12').textContent=sm===12?'5年':'1年';
   $('pname').textContent=nameOf();$('page').textContent=`${S.age}歳・${bandOf(S.age)}`;
   $('ptm').textContent=S.tm.on?`気質 ${tmType(S.tm)}`:'気質 形成中';
   $('pplace').textContent=`${P.place}（${P.label}）`;$('pera').textContent=S.era||P.era;

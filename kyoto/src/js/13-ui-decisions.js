@@ -21,7 +21,7 @@ function fireOrdinary(){
   if(e.np)for(const k in e.np)if(S.npc[k].known&&!S.npc[k].dead)hist(k,e.x);
 }
 function fireLearn(){
-  const yq=S.mode==='q';
+  const yq=S.age<TIME.ADULT_FROM;
   const L=LEARN[S.pid][S.policy==='学び'?'study':'work'],e=L[rnd(L.length)];
   const np={};if(e.np)for(const k in e.np)if(S.npc[k].known&&!S.npc[k].dead)np[k]=e.np[k];
   addLog('n',e.x);lastBubble=e.b;applyFx(e.fx,np);
@@ -29,9 +29,10 @@ function fireLearn(){
   S.skill=clamp(S.skill+e.sk*(yq?0.2:0.5),0,1000);
 }
 function rollSlots(){
-  const yq=S.mode==='q',ne=yq?1:2,list=[];
+  const sm=stepMonths(S.age),yq=S.age<TIME.ADULT_FROM,ne=yq?sm/3:sm/6,list=[];     // 画面の1回分の長さに比例（旧: 3か月=1回、1年=2回）
   for(let i=0;i<ne;i++)if(Math.random()<0.6)list.push({k:'o',at:0.1+Math.random()*0.8});
-  if(S.age>=6&&(S.policy==='学び'||(S.policy==='仕事'&&S.age>=13))&&Math.random()<0.5)list.push({k:'l',at:0.1+Math.random()*0.8});
+  const nl=yq?sm/3:1,pl=yq?0.5:0.5*sm/12;
+  if(S.age>=6&&(S.policy==='学び'||(S.policy==='仕事'&&S.age>=13)))for(let i=0;i<nl;i++)if(Math.random()<pl)list.push({k:'l',at:0.1+Math.random()*0.8});
   return list.sort((a,b)=>a.at-b.at);
 }
 function runSlot(s){
@@ -47,24 +48,34 @@ function armSlots(ms){
   const full=SPEEDS[speedIdx][0],p0=1-ms/full;
   slots.forEach(s=>evT.push(setTimeout(()=>fireSlot(s),Math.max(50,(s.at-p0)*full))));
 }
+/* ---------- 時間の進め方（仕様v1.7 §2）----------
+   画面の1回分（ゲージ）の長さは年齢で決まる（TIME.STEP_MONTHS）。内部は常に3か月（1四半期）ずつ tickQ() で処理し、
+   1回分の中で四半期ごとに病気・死亡・誕生日・小さな選択・月次の収支と期限を判定する。
+   途中で選択や死亡が起きたら、そこで止まる（残りは回答後の次の進行で続ける。S.q が位置を保持するので二重処理しない）。 */
 function tick(){
   if(S.decision||S.dead)return false;
-  const P=PERSONAS[S.pid],yq=S.mode==='q',yrs=yq?0.25:1;
+  const k=stepMonths(S.age)/3,n=k-(S.q%k);                  // この回の残り四半期数（保存・再開の途中でも境目に揃う）
+  for(let i=0;i<n;i++){tickQ();if(S.dead||S.decision)break}
+  if(S.q%k===0)S.tk=(S.tk||0)+1;                            // 外側の進行（画面の1回分）の回数。本人の確認待ちの期限の基準
+  syncStep();
+  return true;
+}
+/* 内部の1四半期。年齢が TIME.ADULT_FROM 以上のときは、旧「1年進行」で調整した数値を1四半期あたりに換算して用いる（総量は同じ） */
+function tickQ(){
+  const P=PERSONAS[S.pid],yq=true,yrs=0.25,ad=S.age>=TIME.ADULT_FROM;
   popQ=[];lastBubble=null;
   // calendar
   let bday=false;
-  if(yq){S.q++;S.t+=0.25;if(S.q>3){S.q=0;S.year++;S.age++;bday=true}}
-  else{S.year++;S.age++;S.t+=1;bday=true}
+  S.q++;S.t+=0.25;if(S.q>3){S.q=0;S.year++;S.age++;bday=true}
   if(bday){
     const was=bandOf(S.age-1),now=bandOf(S.age);
     if(was!==now)addLog('k',`${now}になった。（${S.age}歳）`,true);
     else addLog('k',`${S.age}歳になった。`,S.age%10===0);
     lastBubble=`${S.age}歳！`;
     S.npc.forEach(n=>{if(!n.known&&n.from!=null&&S.age>=n.from){n.known=true;const tx=n.fromText?`${n.name}${n.fromText}`:`${n.name}と顔を合わせるようになった。`;addLog('n',tx,true);hist(S.npc.indexOf(n),n.fromText?'生まれた':'顔を合わせるようになった')}});
-    if(yq&&S.age>=S.switchAge){S.mode='y';addLog('k','これからは、一年ごとに時が過ぎていく。',true)}
   }
   // growth / policy drift (all numbers are placeholders)
-  const f=yq?1.5:4,pol=POLICIES[S.policy],act=S.policy!=='休養';
+  const f=ad?1:1.5,pol=POLICIES[S.policy],act=S.policy!=='休養';
   natStep(S,S.age,yrs,yq);                  // 年齢による自然な成長と衰え（★は掛けない）
   S.stats=S.stats.map((v,i)=>{              // 生活方針による活動の成長（プラスの分だけ★が効く。休養は回復なので掛けない）
     let g=0;
@@ -78,7 +89,7 @@ function tick(){
     }
     return clamp(v+g,0,1000)});
   xpDecay(S,yrs,S.age,XP_DECAY_ME);starAll();   // 使わない力は、★の経験値がゆっくり減る（13歳から）
-  S.npc.forEach(n=>{if(n.known&&!n.dead)n.aff=clamp(n.aff+(S.policy==='交流'?1:0)+(rnd(5)-2)*(yq?1:2),0,100)});
+  S.npc.forEach(n=>{if(n.known&&!n.dead)n.aff=clamp(n.aff+(S.policy==='交流'?(ad?(Math.random()<0.25?1:0):1):0)+(rnd(5)-2),0,100)});
   tmReport();                               // 主人公の気質：表示の開始・文字の変化
   // skill (hidden 0-1000; only the level is shown)
   if(S.age>=6){
@@ -110,7 +121,7 @@ function tick(){
   if(S.age<13&&!S.orphan&&S.npc.some(n=>n.rel==='家族'&&n.dead)&&!S.npc.some(n=>n.rel==='家族'&&!n.dead&&S.age+n.off>=0)){
     S.orphan=true;addLog('c','身寄りが少なくなり、近所の人や親族に支えられて暮らすことになった。',true);applyFx([0,0,-9,0]);S.sx[2]-=40;starAll();
   }
-  stIds();stMonths(yq?3:12);                // 状態の進行：外側は四半期・年のまま、内部だけ月順（収支・活動・件の確認・期限）
+  stIds();stMonths(3);                // 状態の進行：内部の1四半期＝3か月分を月順に処理（画面の1回分が半年・1年でも省略しない）（収支・活動・件の確認・期限）
   // 後日談（旧形式）：旧セーブに残っている予約だけを届ける。新しい決断の後日談は「件」が受け持つ
   if(S.pending&&S.pending.length){
     const due=[];S.pending=S.pending.filter(p=>{if(--p.in<=0){due.push(p);return false}return true});
@@ -118,13 +129,13 @@ function tick(){
   }
   // illness
   if(S.ongoing){
-    S.stats[0]=clamp(S.stats[0]+10,0,1000);
+    S.stats[0]=clamp(S.stats[0]+(ad?2.5:10),0,1000);
     if(--S.ongoing.left<=0){addLog('c','体調がすっかり戻った。',true);S.ongoing=null}
   }else{
-    const pill=(0.05+S.age/1500)*(yq?1:3)*(S.age<6?1.6:1);
+    const pill=(0.05+S.age/1500)*(ad?0.75:1)*(S.age<6?1.6:1);
     if(Math.random()<pill){
       const sev=Math.random()<0.05+S.age/1200;
-      S.ongoing={name:sev?'重い病':'風邪',mult:sev?HZ.sevMult:HZ.illMult,left:yq?1+rnd(2):1};
+      S.ongoing={name:sev?'重い病':'風邪',mult:sev?HZ.sevMult:HZ.illMult,left:ad?4:1+rnd(2)};
       const d=sev?150:60;S.stats[0]=clamp(S.stats[0]-d,0,1000);popQ.push([0,-d]);emo('self','sad');if(sev){S.sx[0]-=70;starAll()}   /* 重い病は、体力の伸びやすさを下げることがある（特別な経験） */
       lastBubble=sev?'ううっ…':'ゴホゴホ…';
       addLog('c',sev?'重い病にかかり、長く床につくことになった。':'風邪をひき、しばらく療養することになった。',true);
@@ -139,10 +150,10 @@ function tick(){
     let d=Math.random()<0.85?evPick('b'):null;       // 設計案の大きな選択（なければ従来の決断）
     if(!d){d=P.dec[S.decCount%P.dec.length];
     for(let k=0;k<P.dec.length;k++){const c=P.dec[(S.decCount+k)%P.dec.length],pn=S.npc[c.who];if(pn&&pn.known&&!pn.dead){d=c;break}}}   /* 相手がいる決断を優先 */
-    S.decision=d;lastBubble='どうしよう…！';S.decCount++;S.nextDecT=S.t+(yq?2+rnd(3):3+rnd(4));
+    S.decision=d;lastBubble='どうしよう…！';S.decCount++;S.nextDecT=S.t+(ad?3+rnd(4):2+rnd(3));
     S.nextSmallT=Math.max(S.nextSmallT,S.t+1);
-  }else if(S.age>=4&&S.t>=S.nextSmallT){     // 小さな選択：選ぶまで時間が止まる
-    S.decision=(Math.random()<0.85&&evPick('s'))||makeSmall();lastBubble='どうしよう…';S.nextSmallT=S.t+SMALL_GAP(yq);
+  }else if(S.age>=TIME.SMALL_FROM_AGE&&S.t>=S.nextSmallT){     // 小さな選択：選ぶまで時間が止まる
+    S.decision=(Math.random()<0.85&&evPick('s'))||makeSmall();lastBubble='どうしよう…';S.nextSmallT=S.t+SMALL_GAP(!ad);
   }
   saveAutoSoon();
   return true;
@@ -244,7 +255,7 @@ function choose(i){
   if(o.sx){o.sx.forEach((x,k)=>{S.sx[k]+=x});starAll()}                       // 特別な経験：★の経験値が一気に動く
   if(o.tm){o.tm.forEach(([ax,dir,w])=>tmNudge(S.tm,ax,dir,w,S.age,`${d.title}：${o.l}`));tmReport()}   // 本人の選択で気質が少し動く
   stRun(o,d,i);                                                                // 状態の変更（件・情報・資源・活動）。一つの選択の効果として一度だけ
-  if(o.later){if(o.later.fu)S.pending.push({in:evIn(o.later.fu.sp.m),fu:o.later.fu});else S.pending.push({in:S.mode==='q'?Math.max(1,Math.ceil(o.later.m/3)):1,t:o.later.t,x:o.later.x,fx:o.later.fx})}
+  if(o.later){if(o.later.fu)S.pending.push({in:evIn(o.later.fu.sp.m),fu:o.later.fu});else S.pending.push({in:Math.max(1,Math.ceil(o.later.m/3)),t:o.later.t,x:o.later.x,fx:o.later.fx})}
   lastBubble=o.l+'！';
   const stats=popQ.filter(q=>Math.abs(q[1])>=3).map(q=>[q[0],q[1]]);
   saveAutoSoon();

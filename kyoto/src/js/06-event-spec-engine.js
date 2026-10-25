@@ -210,7 +210,7 @@ function evProb(pi,k){
   if(k==='E')p+=clamp((S.skill-300)/3000,-0.1,0.1);                         // 技能
   return clamp(p,0.2,0.8);
 }
-const evIn=m=>S.mode==='q'?Math.max(1,Math.ceil(m/3)):1;
+const evIn=m=>Math.max(1,Math.ceil(m/3));              // 後日談の待ち：内部の四半期数（月数÷3）
 function evFollowDue(p){
   const f=p.fu,sp=f&&f.sp;
   if(!sp||!sp.ok||!evStr(sp.ok.x)||!evFx4(sp.ok.fx)){evProblem(`後日談（${(f&&f.id)||'?'}）の内容が不正なため、適用せずに中止した`);return}

@@ -23,19 +23,41 @@ const R = await page.evaluate(() => {
   out.T01 = { y1: personaIn(1), y2025: personaIn(2025) };
   // T02 20か国版
   out.T02 = { countries: typeof COUNTRY !== 'undefined' };
-  // T03 年齢境界の送り幅
-  { const steps = play('m90c', 1990); const at = {};
-    for (const [a, d] of steps) (at[a] ??= new Set()).add(d);
-    out.T03 = Object.fromEntries([0, 5, 6, 24, 25, 59, 60].map((a) => [a, at[a] ? [...at[a]] : null])); }
-  // T04 0〜5歳の送り幅1年・途中の出来事
-  { const steps = play('m90c', 1990, 6); out.T04 = { infantStep: [...new Set(steps.filter(([a]) => a < 6).map((s) => s[1]))], firstChoiceAge: null };
-    newGame('m90c', 1990); let g = 0; while (!S.dead && !S.decision && g++ < 400) tick(); out.T04.firstChoiceAge = S.decision ? S.age : null; }
-  // T05 選択中の保存・復元・二重回答
+  const quiet = () => { const sv = { ...HZ }; HZ.B = 0; HZ.child = 0; HZ.acc = 0; HZ.illMult = 1; HZ.sevMult = 1; return () => Object.assign(HZ, sv); };
+  // T03 年齢境界の送り幅（死亡確率を止め、決断には先頭の選択肢で答え、境目から始まった1回分だけを測る）
+  { const back = quiet(); const at = {};
+    for (const [pid, yr] of [['m90c', 1990], ['common', 1000]]) { newGame(pid, yr); let g = 0;
+      while (!S.dead && S.age < 63 && g++ < 9000) { if (S.decision) { choose(0); if (S.decision) S.decision = null; continue }
+        S.nextSmallT = 1e9; S.nextDecT = 1e9;                                   // 送り幅だけを測るため、この間は選択を止める（選択の検査はT04・T05）
+        const a0 = S.age, q0 = S.q, t0 = S.t, k = stepMonths(S.age) / 3; tick();
+        if (q0 % k === 0 && !S.decision && !S.dead) (at[a0] ??= new Set()).add(+(S.t - t0).toFixed(2)); } }
+    back(); out.T03 = Object.fromEntries([0, 3, 5, 6, 10, 23, 24, 25, 40, 58, 59, 60, 62].map((a) => [a, at[a] ? [...at[a]] : null])); }
+  // T04 0〜5歳の1年送り中の出来事を飛ばさない
+  { const R4 = {};
+    { const back = quiet(); let bad = 0, n = 0;                                  // a. 乳児の1回分=1年で、内部の月が12回すべて処理される
+      for (let i = 0; i < 20; i++) { newGame('common', 1000); const mo0 = S.mo; tick(); n++; if (S.mo - mo0 !== 12 || Math.abs(S.t - 1) > 1e-9) bad++; }
+      R4.infantYearMonths = { runs: n, bad }; back(); }
+    { const back = quiet(); let early = 0;                                        // b. 4歳になる前は選択が出ない
+      for (let i = 0; i < 100; i++) { newGame('common', 1000); S.nextSmallT = 0; S.nextDecT = 0; let g = 0; while (!S.dead && S.age < 4 && g++ < 30) { tick(); if (S.decision && S.age < 4) early++ } }
+      R4.choiceBeforeAge4 = early; back(); }
+    { const back = quiet(); newGame('common', 1000); let g = 0;                    // c. 4〜5歳で期限が来た小さな選択は、年の途中でも時間を止めて出る
+      while (S.age < 4 && g++ < 20) tick(); S.nextSmallT = S.t + 0.5; const t0 = S.t; tick();
+      R4.smallChoiceMidYear = { appeared: !!S.decision, elapsedYears: +(S.t - t0).toFixed(2), expected: 0.5 }; back(); }
+    { newGame('common', 1000); HZ.child = 1e6; tick();                            // d. 乳児の死亡は、その四半期で確定して止まる（年末まで進めない）
+      R4.deathMidYear = { dead: S.dead, t: S.t }; HZ.child = 0.03; }
+    out.T04 = R4; }
+  // T05 選択中の時間停止・保存復元・二重回答
   { newGame('m90c', 1990); let g = 0; while (!S.dead && !S.decision && g++ < 800) tick();
-    const before = JSON.stringify(S.decision);
+    const before = JSON.stringify(S.decision), tBefore = S.t, qBefore = S.q;
+    const blocked = tick() === false && S.t === tBefore && S.q === qBefore;                   // 回答待ちの間は時間が進まない
     const copy = JSON.parse(JSON.stringify(S)); const after = JSON.stringify(copy.decision);
     const snap1 = JSON.stringify(S); choose(0); const snap2 = JSON.stringify(S); choose(0); const snap3 = JSON.stringify(S);
-    out.T05 = { hasDecision: !!before && before !== 'null', sameAfterReload: before === after, answeredOnce: snap2 !== snap1 && snap2 === snap3 }; }
+    out.T05 = { hasDecision: !!before && before !== 'null', timeStoppedWhilePending: blocked, sameAfterReload: before === after, answeredOnce: snap2 !== snap1 && snap2 === snap3 };
+    // 1回分の途中（乳児の2四半期め）で保存→復元→続行しても、残りの2四半期だけが進む（二重に進まない）
+    const back = quiet(); newGame('common', 1000); tickQ(); tickQ(); const mid = JSON.parse(JSON.stringify(S));
+    tick(); const t1 = S.t, mo1 = S.mo;
+    S = migrate(JSON.parse(JSON.stringify(mid))); tick();
+    out.T05.midGaugeResume = { midT: mid.t, afterContinue: S.t, expected: 1, sameAsDirect: S.t === t1 && S.mo === mo1 }; back(); }
   // T06 死亡の確定が一度きり
   { newGame('m90c', 1990); HZ.child = 5; let g = 0; while (!S.dead && g++ < 50) { if (S.decision) { choose(0); continue } tick(); }
     const age = S.deathAge, logs = S.log.length; const again = tick(); const logs2 = S.log.length;
@@ -72,10 +94,12 @@ const add = (id, name, status, ev) => rows.push({ id, name, status, ev });
 const r = R;
 add('T01', '日本版で1年・2025年を出生', r.T01.y2025.length && r.T01.y1.length ? '合格' : '不合格', `1年→${r.T01.y1.join(',') || 'なし'} / 2025年→${r.T01.y2025.join(',') || '境遇なし'}`);
 add('T02', '20か国版の出生抽選', r.T02.countries ? '未実施' : 'ブロック', '国別データと抽選が未実装（v1.7どおり日本版合格後）');
-{ const t = r.T03, ok = t[0]?.[0] === 1 && t[5]?.[0] === 1 && t[6]?.[0] === 0.25 && t[24]?.[0] === 0.25 && t[25]?.[0] === 0.5 && t[59]?.[0] === 0.5 && t[60]?.[0] === 1;
-  add('T03', '年齢境界の送り幅', ok ? '合格' : '不合格', '年齢→送り幅(年): ' + JSON.stringify(t)); }
-add('T04', '0〜5歳の途中の出来事', r.T04.infantStep.length === 1 && r.T04.infantStep[0] === 1 ? '未実施' : 'ブロック', `0〜5歳の送り幅=${r.T04.infantStep} / 最初の選択は${r.T04.firstChoiceAge}歳（単位1で1年送りに変更後に検査）`);
-add('T05', '選択中の再読込・二重回答', r.T05.hasDecision && r.T05.sameAfterReload && r.T05.answeredOnce ? '一部合格' : '不合格', JSON.stringify(r.T05) + ' ／乱数状態は保存されず、再開後の未来の再現性は未検証');
+{ const t = r.T03, one = (a, v) => t[a] && t[a].length === 1 && t[a][0] === v;
+  const ok = one(0, 1) && one(3, 1) && one(5, 1) && one(6, 0.25) && one(10, 0.25) && one(23, 0.25) && one(24, 0.25) && one(25, 0.5) && one(40, 0.5) && one(58, 0.5) && one(59, 0.5) && one(60, 1) && one(62, 1);
+  add('T03', '年齢境界の送り幅', ok ? '合格' : '不合格', '年齢→1回分の長さ(年): ' + JSON.stringify(t)); }
+{ const t = r.T04, ok = t.infantYearMonths.bad === 0 && t.choiceBeforeAge4 === 0 && t.smallChoiceMidYear.appeared && t.smallChoiceMidYear.elapsedYears === 0.5 && t.deathMidYear.dead && t.deathMidYear.t === 0.25;
+  add('T04', '0〜5歳の途中の出来事', ok ? '合格' : '不合格', JSON.stringify(t) + ' ／幼児の選択開始4歳はユーザー決定(A案)'); }
+add('T05', '選択中の再読込・二重回答・時間停止', r.T05.hasDecision && r.T05.timeStoppedWhilePending && r.T05.sameAfterReload && r.T05.answeredOnce && r.T05.midGaugeResume.sameAsDirect ? '一部合格' : '不合格', JSON.stringify(r.T05) + ' ／乱数状態は保存されないため、再開後の未来を完全に同一にする検査は単位2');
 add('T06', '死亡の二重確定', r.T06.dead && !r.T06.tickAfterDeath && r.T06.deathLogCount === 1 ? '一部合格' : '不合格', JSON.stringify(r.T06) + ' ／病気・事故との二重計上は死亡率の再設計後に検査');
 add('T07', '好感度9↔10の相関図', '未実施', r.T07.note);
 add('T08', '能力・★・気質の生成と保存', r.T08.ok ? '合格' : '不合格', JSON.stringify(r.T08) + ' (300人)');

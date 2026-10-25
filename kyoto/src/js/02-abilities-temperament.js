@@ -195,6 +195,7 @@ function migrate(s){
   if(typeof s.nextSmallT!=='number')s.nextSmallT=s.t+seeded(hash(`${s.pid}|${s.switchAge}|small|${Math.floor(s.t)}`),()=>SMALL_GAP(s.mode==='q'));
   s.ver=5;
   stNew(s);
+  s.sm=stepMonths(s.age);s.mode=s.sm>=12?'y':'q';          // 進行幅は年齢から決まる（v1.7）。旧セーブの mode は表示用に再計算する
   return s;
 }
 const GEN={

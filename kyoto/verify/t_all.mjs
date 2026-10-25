@@ -140,7 +140,7 @@ const R=await page.evaluate((legacy)=>{
       T(7,(kind==='small'?'小さな選択':'大きな選択（決断）')+'が出たら、回答するまで時間が進まない',has&&sz===(kind==='small')&&r===false&&age1===age0&&S.t===t0,'');
     }
     // step() も止まる
-    newGame('common');S.age=20;S.t=20;S.mode='y';S.nextSmallT=0;S.nextDecT=1e9;const a0=S.age;step(5);T(7,'「1年×5」操作でも、選択が出た時点で止まる',S.decision&&S.age===a0+1,'age '+a0+'→'+S.age);
+    newGame('common');S.age=20;S.t=20;S.mode='y';S.nextSmallT=0;S.nextDecT=1e9;const t00=S.t;step(5);T(7,'「5回進める」操作でも、選択が出た時点で止まる（v1.7: 20歳の1回分は3か月）',!!S.decision&&Math.abs(S.t-(t00+0.25))<1e-9,'t '+t00+'→'+S.t);
     // 回答は一度だけ反映
     newGame('common');S.age=20;S.t=20;S.decision=makeSmall();const tm0=JSON.stringify(S.tm.v),st0=S.stats.slice();choose(0);const tm1=JSON.stringify(S.tm.v),st1=S.stats.slice();choose(0);choose(1);
     T(7,'同じ選択への回答は二重に反映されない',JSON.stringify(S.tm.v)===tm1&&S.stats.every((v,i)=>v===st1[i])&&tm0!==tm1,'');

@@ -33,4 +33,12 @@ function nameNpcs(s){                      // 役割名のままの人物に、�
 // 家族の生成（仮）：n0 が家族の境遇は、もう一人の親だけ追加。親が欠ける場合は祖母が加わる。兄弟姉妹は0〜2人
 const FAMNEED={aristocrat:['父'],common:['父'],farm:['母'],artisan:['母','父']};
 let FAM_MISS=0.12, FAM_SIB=[35,40,25], FAM_ELDER=0.5;   // 養育者が欠ける確率／兄弟姉妹0・1・2人の割合（％）／兄・姉になる確率（すべて仮）
-let SWITCH_AGE=[20,30];                               // 四半期→1年単位へ切り替わる年齢の範囲（誕生時に一様に抽選）
+/* ---- 時間の進め方（仕様v1.7 §2 確定）。画面の1回分の長さ（月）。内部は常に3か月ずつ処理する ---- */
+const TIME={
+  STEP_MONTHS:[[0,12],[6,3],[25,6],[60,12]],   // [開始年齢, 月数]：0〜5歳=1年、6〜24歳=3か月、25〜59歳=6か月、60歳以上=1年【確定】
+  ADULT_FROM:25,                                // 旧「1年進行」の数値を換算して使う年齢（進行幅の境目と同じ）
+  SMALL_FROM_AGE:4                              // 小さな選択が出始める年齢【ユーザー決定のゲーム仮定 2026-10-25：A案=4歳から】
+};
+function stepMonths(age){let m=TIME.STEP_MONTHS[0][1];for(const [a,v] of TIME.STEP_MONTHS)if(age>=a)m=v;return m}
+function syncStep(){S.sm=stepMonths(S.age);S.mode=S.sm>=12?'y':'q'}   // 画面表示用の派生値（mode: 'y'=1年ごと, 'q'=1年未満ごと）
+let SWITCH_AGE=[20,30];                               // 【旧】進行幅の切替年齢。v1.7で年齢固定（TIME）になり使わない。人物の絵などの種として残す

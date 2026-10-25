@@ -34,7 +34,7 @@ $('speed').onclick=()=>{
   if(timer){stop();if(remaining!=null)remaining=remaining*nw/old;start()}
   else{if(remaining!=null){remaining=remaining*nw/old;setBar(1-remaining/nw,0)}render()}
 };
-$('adv1').onclick=()=>step(1);$('adv12').onclick=()=>step(S.mode==='q'?4:5);$('advd').onclick=()=>step(0,true);
+$('adv1').onclick=()=>step(1);$('adv12').onclick=()=>step(S.sm===12?5:S.sm===6?2:4);$('advd').onclick=()=>step(0,true);
 $('newrand').onclick=()=>{const b=randomBirth();newLife(b.pid,b.year,true)};
 document.addEventListener('click',e=>{
   if(evMode&&!e.target.closest('[data-opt]')&&(e.target.closest('#evcard')||e.target.closest('.evback'))){evTap();return}
