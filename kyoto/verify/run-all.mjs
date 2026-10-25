@@ -10,6 +10,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const files = readdirSync(here).filter((f) => /^t_.*\.mjs$/.test(f)).sort();
+// 未解決の不安定な失敗（t_rng が並列実行時に1回だけ失敗。原因不明・再現せず）の継続監視：t_rng を追加で繰り返す。回数は環境変数 MONITOR_RNG（既定2）
+const monitorN = Number(process.env.MONITOR_RNG ?? 2);
+for (let i = 0; i < monitorN; i++) files.push('t_rng.mjs');
 const par = Number(process.argv[2] ?? 3);
 // 旧イベント140件に頼る検査は、削除前のイベントを差し戻した検証用ビルドで実行する（出来事の処理そのものの退行を見張るため）
 const NEEDS_EVENTS = new Set(['t_double', 't_s5', 't_s5ui', 't_s6', 't_s6ui', 't_s7', 't_s7ui', 't_s8', 't_st2'].map((n) => n + '.mjs'));

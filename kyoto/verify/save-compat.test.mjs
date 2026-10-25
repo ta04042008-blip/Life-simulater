@@ -19,6 +19,7 @@ const make=()=>{
     setTimeout:(fn,ms)=>{steps.push(fn);return steps.length},clearTimeout:()=>{},
     toast:m=>messages.push(m),$:(id)=>null,migrate:s=>{s.sv=1;return s},
     stop:()=>{},setBar:()=>{},bthEnd:()=>{},evHide:()=>{},go:()=>{},centerScene:()=>{},
+    BIRTH_MAX:Number(readFileSync(new URL('../src/js/01-core-personas.js',import.meta.url),'utf8').match(/const BIRTH_MAX=(\d+);/)[1]),   // 本番の定義をそのまま使う
     confirm:()=>true,remaining:0,resume:false,sceneX:0,
     Date,Math,console,
   });
@@ -59,10 +60,10 @@ test('invalid, future and malformed saves are rejected without changing current 
 });
 test('restore preserves the prior current life independently from manual saves',()=>{
   const x=make(),key='kyoto-kurashi-mihon-v4';
-  x.db.set(key,JSON.stringify({...makeState(),age:30}));
+  x.db.set(key,JSON.stringify({...makeState(),age:30,t:30,year:116}));
   x.run('saveNewLife()');
   const previous=x.run('JSON.stringify(S)');
-  const other=makeState();other.age=50;
+  const other=makeState();Object.assign(other,{age:50,t:50,year:150});
   x.ctx.sample=other;
   assert.equal(x.run("saveRestore(sample,'JSONファイル')"),true);
   assert.equal(x.run('S.age'),50);
@@ -81,7 +82,7 @@ test('legacy raw state is preserved before migration and new exported wrapper is
   assert.equal(x.run("saveRestore(legacy,'旧セーブ')"),true);          // 同じ原本を何度読み込んでも、上書きも増殖もしない
   assert.equal(JSON.parse(x.db.get(key+'-premigrate-index')).length,1);
   assert.equal(x.db.get(idx[0].key),firstCopy);
-  const other=makeState();delete other.sv;other.age=30;x.ctx.other=other;   // 別の原本は別のキーで残す
+  const other=makeState();delete other.sv;Object.assign(other,{age:30,t:30,year:116});x.ctx.other=other;   // 別の原本は別のキーで残す
   assert.equal(x.run("saveRestore(other,'別の旧セーブ')"),true);
   assert.equal(JSON.parse(x.db.get(key+'-premigrate-index')).length,2);
   assert.equal(x.db.get(idx[0].key),firstCopy);
