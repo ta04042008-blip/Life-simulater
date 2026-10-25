@@ -41,13 +41,15 @@ function step(n,untilDecision){
   if(untilDecision&&!S.decision&&!S.dead){let g=0;while(!S.decision&&!S.dead&&g++<400)go1()}
   render();showFx();
 }
-function randomBirth(){                                    // 生まれ年を西暦1〜1900年からランダムに引き、その年の時代の境遇を重みで選ぶ（人生の乱数 S.rs には触れない）
-  const run=typeof rngFree==='function'?rngFree:(f=>f());
+function birthCandidates(y){return Object.keys(RANDW).filter(k=>PERSONAS[k]&&!PERSONAS[k].testOnly&&RANDW[k]>0&&y>=PERSONAS[k].yr[0]&&y<PERSONAS[k].yr[1])}
+function randomBirth(forcedYear){                                    // 生まれ年を西暦1〜2025年から完全に均等に引き、その年に生まれうる正式な境遇を重みで選ぶ（人生の乱数 S.rs には触れない）
+  const run=typeof rngFree==='function'?rngFree:(f=>f());   // 引いた年は、データが無くても別の年へ引き直さない。境遇が無ければ gap=true を返す
   return run(()=>{
-  const y=1+rnd(1900),c=Object.keys(RANDW).filter(k=>y>=PERSONAS[k].yr[0]&&y<PERSONAS[k].yr[1]);
-  const tot=c.reduce((a,k)=>a+RANDW[k],0);let r=Math.random()*tot;
+  const y=forcedYear||1+rnd(BIRTH_MAX),c=birthCandidates(y);   // forcedYear は検査専用（通常は渡さない）
+  const tot=c.reduce((a,k)=>a+RANDW[k],0);if(!c.length)return{pid:null,year:y,gap:true};
+  let r=Math.random()*tot;
   for(const k of c){r-=RANDW[k];if(r<0)return{pid:k,year:y}}
-  return{pid:c[0]||'common',year:y};
+  return{pid:c[c.length-1],year:y};
   });
 }
 const randomPersona=()=>randomBirth().pid;

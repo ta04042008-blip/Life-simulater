@@ -1,11 +1,21 @@
 // 05-birth-era-personas.js — 生まれ年と時代の判定、新しい13の境遇、ランダム出生
 /* ---------- 生まれ年と時代／新しい境遇（背景は既存のものとは別・文章と絵は近い境遇のものを流用） ---------- */
-const eraName=y=>y<794?'古代':y<1185?'平安':y<1333?'鎌倉':y<1573?'室町':y<1603?'安土桃山':y<1868?'江戸':y<1912?'明治':y<1926?'大正':y<1989?'昭和':'平成';
+const eraName=y=>y<794?'古代':y<1185?'平安':y<1333?'鎌倉':y<1573?'室町':y<1603?'安土桃山':y<1868?'江戸':y<1912?'明治':y<1926?'大正':y<1989?'昭和':y<2019?'平成':'令和';
 const eraText=(y)=>`${eraName(y)}（${y}年頃）`;
 PERSONAS.aristocrat.yr=[1,1185];PERSONAS.common.yr=[1,1185];PERSONAS.farm.yr=[1,1185];PERSONAS.artisan.yr=[1185,1603];
 PERSONAS.aristocrat.ns='noble';PERSONAS.common.ns='heian';PERSONAS.farm.ns='heian';PERSONAS.artisan.ns='muro';
 RANDW.aristocrat=5;RANDW.common=45;RANDW.farm=35;RANDW.artisan=50;                  // ランダムの重み：同じ時代の中で（仮）
 const NEWBG={"mer_m": {"spring": "@@ASSET:backgrounds/mer_m_spring.png@@", "summer": "@@ASSET:backgrounds/mer_m_summer.png@@", "autumn": "@@ASSET:backgrounds/mer_m_autumn.png@@", "winter": "@@ASSET:backgrounds/mer_m_winter.png@@"}, "edo_farm": {"spring": "@@ASSET:backgrounds/edo_farm_spring.png@@", "summer": "@@ASSET:backgrounds/edo_farm_summer.png@@", "autumn": "@@ASSET:backgrounds/edo_farm_autumn.png@@", "winter": "@@ASSET:backgrounds/edo_farm_winter.png@@"}, "edo_machiya": {"spring": "@@ASSET:backgrounds/edo_machiya_spring.png@@", "summer": "@@ASSET:backgrounds/edo_machiya_summer.png@@", "autumn": "@@ASSET:backgrounds/edo_machiya_autumn.png@@", "winter": "@@ASSET:backgrounds/edo_machiya_winter.png@@"}, "edo_shop": {"spring": "@@ASSET:backgrounds/edo_shop_spring.png@@", "summer": "@@ASSET:backgrounds/edo_shop_summer.png@@", "autumn": "@@ASSET:backgrounds/edo_shop_autumn.png@@", "winter": "@@ASSET:backgrounds/edo_shop_winter.png@@"}, "edo_nagaya": {"spring": "@@ASSET:backgrounds/edo_nagaya_spring.png@@", "summer": "@@ASSET:backgrounds/edo_nagaya_summer.png@@", "autumn": "@@ASSET:backgrounds/edo_nagaya_autumn.png@@", "winter": "@@ASSET:backgrounds/edo_nagaya_winter.png@@"}, "sh_rent": {"spring": "@@ASSET:backgrounds/sh_rent_spring.png@@", "summer": "@@ASSET:backgrounds/sh_rent_summer.png@@", "autumn": "@@ASSET:backgrounds/sh_rent_autumn.png@@", "winter": "@@ASSET:backgrounds/sh_rent_winter.png@@"}, "sh_sal": {"spring": "@@ASSET:backgrounds/sh_sal_spring.png@@", "summer": "@@ASSET:backgrounds/sh_sal_summer.png@@", "autumn": "@@ASSET:backgrounds/sh_sal_autumn.png@@", "winter": "@@ASSET:backgrounds/sh_sal_winter.png@@"}, "sh_rich": {"spring": "@@ASSET:backgrounds/sh_rich_spring.png@@", "summer": "@@ASSET:backgrounds/sh_rich_summer.png@@", "autumn": "@@ASSET:backgrounds/sh_rich_autumn.png@@", "winter": "@@ASSET:backgrounds/sh_rich_winter.png@@"}, "m70": {"spring": "@@ASSET:backgrounds/m70_spring.png@@", "summer": "@@ASSET:backgrounds/m70_summer.png@@", "autumn": "@@ASSET:backgrounds/m70_autumn.png@@", "winter": "@@ASSET:backgrounds/m70_winter.png@@"}, "m80a": {"spring": "@@ASSET:backgrounds/m80a_spring.png@@", "summer": "@@ASSET:backgrounds/m80a_summer.png@@", "autumn": "@@ASSET:backgrounds/m80a_autumn.png@@", "winter": "@@ASSET:backgrounds/m80a_winter.png@@"}, "m80d": {"spring": "@@ASSET:backgrounds/m80d_spring.png@@", "summer": "@@ASSET:backgrounds/m80d_summer.png@@", "autumn": "@@ASSET:backgrounds/m80d_autumn.png@@", "winter": "@@ASSET:backgrounds/m80d_winter.png@@"}, "m90c": {"spring": "@@ASSET:backgrounds/m90c_spring.png@@", "summer": "@@ASSET:backgrounds/m90c_summer.png@@", "autumn": "@@ASSET:backgrounds/m90c_autumn.png@@", "winter": "@@ASSET:backgrounds/m90c_winter.png@@"}, "m90w": {"spring": "@@ASSET:backgrounds/m90w_spring.png@@", "summer": "@@ASSET:backgrounds/m90w_summer.png@@", "autumn": "@@ASSET:backgrounds/m90w_autumn.png@@", "winter": "@@ASSET:backgrounds/m90w_winter.png@@"}};
+const NEWP2=[   // 単位3：1901〜1925年と2000〜2025年の正式な境遇（根拠は docs/v17-records/unit3_sources.md）。絵と背景は近い境遇のものを流用
+ ['tai_machiya','artisan','町家（職人・小商い）大正','奉公人','京都・町家',[1901,1926],'taisho',[560,400,540,400],'家業の技',[['親方','師',50],['兄弟子','仲間',32],['隣の店の人','近所',9],['出入りの商人','取引',5]],0,'edo_machiya'],
+ ['tai_factory','common','職工の家（長屋）大正','若者','京都・長屋',[1901,1926],'taisho',[560,300,500,380],'工場の技',[['母','家族',55],['大家','近所',30],['工場の人','取引',6],['同じ年頃の子','友人',18]],0,'edo_nagaya'],
+ ['tai_farm','farm','農家（標準）大正','若者','京都近郊・農家',[1901,1926],'taisho',[620,240,520,340],'農の技',[['父','家族',58],['隣の畑の人','近所',28],['村の世話役','取引',7],['幼なじみ','友人',20]],0,'edo_farm'],
+ ['tai_sal','common','勤め人の家（大正）','若者','京都・市内の借家',[1901,1926],'taisho',[540,520,520,460],'勤めの技',[['母','家族',55],['隣の家の人','近所',30],['近所の店の人','取引',6],['同級生','友人',18]],0,'sh_sal'],
+ ['r_house','common','一戸建ての家（2000年代〜）','若者','京都・住宅地',[2000,2026],'y2000',[540,520,520,480],'勤めの技',[['母','家族',55],['隣の家の人','近所',30],['近所の店の人','取引',6],['同級生','友人',18]],0,'m70'],
+ ['r_mansion','common','マンション暮らし（2000年代〜）','若者','京都・マンション',[2000,2026],'y2000',[540,540,520,500],'勤めの技',[['母','家族',55],['同じ階の人','近所',30],['近所の店の人','取引',6],['同級生','友人',18]],0,'m90c'],
+ ['r_apart','common','賃貸アパート暮らし（2000年代〜）','若者','京都・アパート',[2000,2026],'y2000',[540,480,520,440],'家の仕事',[['母','家族',55],['大家','近所',30],['近所の店の人','取引',6],['同級生','友人',18]],0,'m80a'],
+ ['r_rich','common','裕福な家（2000年代〜）','若者','京都・邸宅',[2000,2026],'y2000',[520,640,500,600],'教養',[['母','家族',60],['隣家の人','近所',30],['出入りの業者','取引',6],['同級生','友人',18]],0,'m90w']
+];
 const NEWP=[
  ['mer_m','artisan','商人（標準）','丁稚','京都・町の店',[1185,1603],'muro',[560,460,560,480],'商い',[['番頭','師',50],['同じ年頃の丁稚','仲間',32],['隣の店の人','近所',9],['取引先の人','取引',5]],50],
  ['edo_farm','farm','農家（標準）','若者','京都近郊・農家',[1603,1901],'edo',[620,240,520,340],'農の技',[['父','家族',58],['隣の畑の人','近所',28],['庄屋の使い','取引',7],['幼なじみ','友人',20]],35],
@@ -21,14 +31,20 @@ const NEWP=[
  ['m90c','common','マンション暮らし','若者','京都・マンション',[1990,2000],'mod',[540,540,520,500],'勤めの技',[['母','家族',55],['同じ階の人','近所',30],['近所の店の人','取引',6],['同級生','友人',18]],0],
  ['m90w','common','裕福な家（1990年代）','若者','京都・邸宅',[1990,2000],'mod',[520,640,500,600],'教養',[['母','家族',60],['隣家の人','近所',30],['出入りの業者','取引',6],['同級生','友人',18]],0]
 ];
-NEWP.forEach(([k,b,label,name,place,yr,ns,stats,skill,npc,rw])=>{
+NEWP.concat(NEWP2).forEach(([k,b,label,name,place,yr,ns,stats,skill,npc,rw,bgFrom])=>{
   const B=PERSONAS[b];
   PERSONAS[k]={...B,label,name,kid:undefined,place,yr,ns,year:yr[0],stats,skillName:skill,
     npc:npc.map((n,i)=>[n[0],n[1],n[2],B.npc[i][3]])};
-  BG[k]=NEWBG[k];SPR.body[k]=SPR.body[b];SPR.hair[k]=SPR.hair[b];SPR.hairGray[k]=SPR.hairGray[b];
+  BG[k]=NEWBG[k]||NEWBG[bgFrom]||BG[b];SPR.body[k]=SPR.body[b];SPR.hair[k]=SPR.hair[b];SPR.hairGray[k]=SPR.hairGray[b];
   NPCOFF[k]=NPCOFF[b];NPCSK[k]=NPCSK[b];NPCSKN[k]=NPCSKN[b];FAMNEED[k]=FAMNEED[b];LEARN[k]=LEARN[b];
   if(rw)RANDW[k]=rw;
 });
+/* 単位3：出生年は西暦1〜2025年から完全に均等に引く。境遇の重みはここ1か所に集約（【仮】＝利用者の判断待ち）。
+   1926〜1999年の境遇はこれまで重み0（手動選択のみ）だったが、均等抽選に合わせて同じ重みで抽選対象にする。 */
+const BIRTH_W_PROV={tai_machiya:10,tai_factory:10,tai_farm:10,tai_sal:10,
+  sh_rent:10,sh_sal:10,sh_rich:10,m70:10,m80a:10,m80d:10,m90c:10,m90w:10,
+  r_house:10,r_mansion:10,r_apart:10,r_rich:10};
+Object.assign(RANDW,BIRTH_W_PROV);
 function makeFamily(pid){
   const P=PERSONAS[pid],out=[];
   const mk=(name,aff,off,skill,from,fromText)=>({name:name,rel:'家族',aff,from,known:from===0,off,skill,skillName:P.skillName,dead:false,deadAge:null,hist:[],extra:{},fromText:fromText||null,...mkPerson(P,Math.max(0,off))});

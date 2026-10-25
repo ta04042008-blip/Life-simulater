@@ -15,7 +15,7 @@ async function run(design) {
   const { b, p, errs } = await run(null);
   const r = await p.evaluate(() => ({ a: KYOTO_DESIGN.applied, e: KYOTO_DESIGN.errors, d: KYOTO_DESIGN.defaults, n: Object.keys(KYOTO_DESIGN.defaults.personas).length }));
   T('設計データ無し：何も差し替えない', r.a === 0 && r.e.length === 0);
-  T('既定値の記録：17境遇・全項目', r.n === 17 && r.d.vars.MAXAGE === 110 && r.d.vars.FAM_SIB.join() === '35,40,25' && r.d.personas.farm.npc.length === 4, JSON.stringify(r.d.vars.SPEEDS));
+  T('既定値の記録：25境遇（単位3で+8）・全項目', r.n === 25 && r.d.vars.MAXAGE === 110 && r.d.vars.FAM_SIB.join() === '35,40,25' && r.d.personas.farm.npc.length === 4, JSON.stringify(r.d.vars.SPEEDS));
   T('エラーなし', errs.length === 0, errs.join());
   await b.close();
 }

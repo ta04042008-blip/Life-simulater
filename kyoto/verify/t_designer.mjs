@@ -23,7 +23,7 @@ try {
   await p.fill('#f-fam-1-0', '35');
   ok('直すと誤りが消える', (await p.textContent('#f-fam-1 .msg')) === '');
   await p.click('[data-tab=per]');
-  ok('境遇17・確率の表示', (await p.$$eval('.prow', (e) => e.length)) === 17);
+  ok('境遇25・確率の表示', (await p.$$eval('.prow', (e) => e.length)) === 25);
   await p.click('[data-per=farm]'); await p.fill('#p-farm-label', 'テスト農家'); await p.fill('#p-farm-yr-0', '2000');
   ok('生まれ年の逆転は誤り', (await p.textContent('#pf-yr .msg')).includes('小さく'));
   await p.fill('#p-farm-yr-0', '1');

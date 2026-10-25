@@ -56,7 +56,7 @@ function layer(c,im,drops,dy,spread){
 const WALK={x0:16,x1:272,y0:82,y1:93};
 const walkers={};let walkSid=null;
 const SKINIDX={aristocrat:0,common:1,farm:2,artisan:1};
-NEWP.forEach(([k,b])=>{SKINIDX[k]=SKINIDX[b]});
+NEWP.concat(NEWP2).forEach(([k,b])=>{SKINIDX[k]=SKINIDX[b]});
 const rr=(a,b)=>a+Math.random()*(b-a);
 function mkW(x,y,i){return{x,y,tx:x,ty:y,wait:rr(.5,3),dir:1,moving:false,ph:0,i}}
 function syncWalkers(){

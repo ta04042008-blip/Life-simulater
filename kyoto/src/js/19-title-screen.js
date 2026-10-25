@@ -27,7 +27,7 @@ function titleScreen(){
   $('tgo').focus();
 }
 const BTH_ON=()=>!(navigator.webdriver&&!window.__bth);        // 自動テストの画面操作は演出を飛ばす（演出自体は window.__bth=1 で確認する）
-function newLife(pid,year,rand){if(!saveProtectPrevious())return false;stop();remaining=null;setBar(0,0);resume=false;bthEnd();newGame(pid,year);saveNewLife();sceneX=null;go('life');centerScene();if(BTH_ON())birthCeremony(!!rand);return true}
+function newLife(pid,year,rand){if(!pid||!PERSONAS[pid]){toast(`${year}年に生まれる境遇のデータがありません。引き直さずに中止しました。`);return false}if(!saveProtectPrevious())return false;stop();remaining=null;setBar(0,0);resume=false;bthEnd();newGame(pid,year);saveNewLife();sceneX=null;go('life');centerScene();if(BTH_ON())birthCeremony(!!rand);return true}
 $('play').onclick=()=>timer?(stop(),render()):start();
 $('speed').onclick=()=>{
   const old=SPEEDS[speedIdx][0];speedIdx=(speedIdx+1)%SPEEDS.length;const nw=SPEEDS[speedIdx][0];

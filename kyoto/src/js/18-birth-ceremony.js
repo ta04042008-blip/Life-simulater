@@ -18,11 +18,11 @@ function bthConfetti(){
 }
 /* ランダムで、その境遇に生まれる確率（％）：年が一様、その年に生まれうる境遇の重みで決まる */
 function bthProb(pid){
-  let p=0;for(let y=0;y<=1900;y++){const c=Object.keys(RANDW).filter(k=>y>=PERSONAS[k].yr[0]&&y<PERSONAS[k].yr[1]);
+  let p=0;for(let y=1;y<=BIRTH_MAX;y++){const c=birthCandidates(y);
     if(c.includes(pid))p+=RANDW[pid]/c.reduce((a,k)=>a+RANDW[k],0)}
-  return p/1901*100;
+  return p/BIRTH_MAX*100;
 }
-const BTH_ERAS=[['古代',0,794],['平安',794,1185],['鎌倉',1185,1333],['室町',1333,1573],['安土桃山',1573,1603],['江戸',1603,1868],['明治〜',1868,2000]];
+const BTH_ERAS=[['古代',0,794],['平安',794,1185],['鎌倉',1185,1333],['室町',1333,1573],['安土桃山',1573,1603],['江戸',1603,1868],['明治〜',1868,2026]];
 const BTH_COL=['#e8d7a6','#e3c27a','#d9a867','#c98f5a','#d97a5a','#b9825a','#9fa89a'];
 function bthRarity(p){return p<1?['とてもまれ','r3']:p<3?['まれ','r2']:p<8?['ときどき','r1']:['よくある','r0']}
 function birthCeremony(rand){
@@ -31,13 +31,13 @@ function birthCeremony(rand){
   const el=document.createElement('div');el.className='bth';el.id='bth';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','誕生');
   document.body.appendChild(el);el.scrollTop=0;
   const pct=bthProb(S.pid),[rk,rc]=bthRarity(pct);
-  const pos=y=>Math.max(0,Math.min(100,y/2000*100));
+  const pos=y=>Math.max(0,Math.min(100,y/2026*100));
   const showStep=(html)=>{el.innerHTML=`<div class="in">${html}</div>`;el.scrollTop=0};
   const skip=()=>{bthEnd()};
   /* 1. 時代のルーレット */
   showStep(`<div class="bth-top"><p>いつかの京都で、ひとりの赤ちゃんが生まれる。</p><button class="sm" id="bsnd" aria-pressed="${bthSound}">${bthSound?'音あり':'音なし'}</button></div>
-    <div class="axis" aria-label="時代の年表"><div class="trk" id="btrk">${BTH_ERAS.map((e,i)=>`<div class="seg" style="width:${(e[2]-e[1])/20}%;background:${BTH_COL[i]}"></div>`).join('')}<div class="mk" id="bmk" style="left:0%"></div></div>
-      <div class="lab">${BTH_ERAS.map(e=>`<span style="width:${(e[2]-e[1])/20}%">${e[0]}</span>`).join('')}</div></div>
+    <div class="axis" aria-label="時代の年表"><div class="trk" id="btrk">${BTH_ERAS.map((e,i)=>`<div class="seg" style="width:${(e[2]-e[1])/20.26}%;background:${BTH_COL[i]}"></div>`).join('')}<div class="mk" id="bmk" style="left:0%"></div></div>
+      <div class="lab">${BTH_ERAS.map(e=>`<span style="width:${(e[2]-e[1])/20.26}%">${e[0]}</span>`).join('')}</div></div>
     <div class="bth-now" id="bnow" aria-live="polite">　</div>
     <div class="bth-pc" id="bpc">　</div>
     <button class="sm" id="bskip" style="align-self:flex-end">とばす</button>`);
@@ -45,7 +45,7 @@ function birthCeremony(rand){
   $('bskip').onclick=()=>{bthEnd()};
   const steps=reduce?6:30,path=[];
   for(let i=0;i<steps-1;i++){
-    if(rand){const b=randomBirth();path.push([b.pid,b.year])}
+    if(rand){const b=randomBirth();if(!b.gap)path.push([b.pid,b.year])}
     else path.push([S.pid,P.yr[0]+rnd(P.yr[1]-P.yr[0])]);
   }
   path.push([S.pid,yr]);
@@ -64,7 +64,7 @@ function birthCeremony(rand){
   bthWait(tick,reduce?100:400);
   function landed(){
     $('bnow').innerHTML=`${yr}年に生まれる${rand?` <span class="rare ${rc}">${rk}</span>`:''}<small>${S.era}・${P.label}</small>`;
-    $('bpc').textContent=rand?`この境遇に生まれる確率 ${pct.toFixed(1)}%（0〜1900年の中で）`:`選んだ境遇（${P.yr[0]}〜${P.yr[1]-1}年のうち）`;
+    $('bpc').textContent=rand?`この境遇に生まれる確率 ${pct.toFixed(1)}%（1〜2025年の中で）`:`選んだ境遇（${P.yr[0]}〜${P.yr[1]-1}年のうち）`;
     $('bmk').classList.add('won');
     if(rand&&pct<3&&!reduce)bthConfetti();
     [784,988,1318].forEach((f,k)=>bthWait(()=>bthBeep(f,.18,.04,'triangle'),k*110));
