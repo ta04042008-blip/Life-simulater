@@ -34,14 +34,14 @@ function makeFamily(pid){
   const mk=(name,aff,off,skill,from,fromText)=>({name:name,rel:'家族',aff,from,known:from===0,off,skill,skillName:P.skillName,dead:false,deadAge:null,hist:[],extra:{},fromText:fromText||null,...mkPerson(P,Math.max(0,off))});
   const need=FAMNEED[pid];let missing=0;
   need.forEach(r=>{
-    if(Math.random()<FAM_MISS&&!(need.length===2&&missing===1)){missing++}
+    if(rand()<FAM_MISS&&!(need.length===2&&missing===1)){missing++}
     else out.push(mk(r,r==='母'?58:52,r==='母'?26:30,400+rnd(250),0));
   });
   if(missing>0)out.push(mk('祖母',55,52,400+rnd(200),0));
-  const r=Math.random(),cnt=r<FAM_SIB[0]/100?0:r<(FAM_SIB[0]+FAM_SIB[1])/100?1:2;
+  const r=rand(),cnt=r<FAM_SIB[0]/100?0:r<(FAM_SIB[0]+FAM_SIB[1])/100?1:2;
   const ELD=[['兄','姉'],['次兄','次姉']],YNG=[['弟','妹'],['末弟','末妹']];let e=0,y=0;
   for(let i=0;i<cnt;i++){
-    if(Math.random()<FAM_ELDER)out.push(mk(ELD[e++][rnd(2)],35+rnd(20),2+rnd(5),100+rnd(150),0));
+    if(rand()<FAM_ELDER)out.push(mk(ELD[e++][rnd(2)],35+rnd(20),2+rnd(5),100+rnd(150),0));
     else{const off=-(2+rnd(3));out.push(mk(YNG[y++][rnd(2)],42+rnd(14),off,40,-off,'が生まれた。'))}
   }
   return out;
@@ -50,13 +50,18 @@ function nameOf(){const P=PERSONAS[S.pid];if(S.myName)return S.myName;return S.a
 function dateLabel(){return S.mode==='q'?`${S.year}年${QL[S.q]}`:`${S.year}年`}
 function newGame(pid,year){
   evHide();
+  // 新しい人生は自分の乱数の種を持つ。作り終わるまでは前の人生の乱数に触れず、最後に状態を S.rs へ書く
+  const sRS=RS,sL=RSL;if(!sL)RS=rngEntropy()|0;RSL=true;               // すでに種を決めた乱数の中（検査など）なら、その続きを使う
+  try{newGameBody(pid,year);S.rs=RS>>>0;RSW=S.rs;RSL=sL}catch(e){RS=sRS;RSL=sL;throw e}
+}
+function newGameBody(pid,year){
   const P=PERSONAS[pid],me=mkPerson(P,0);
   if(year==null)year=P.yr[0]+rnd(P.yr[1]-P.yr[0]);      // 生まれ年：境遇の時代の中でランダム     // 出生時の能力・★・気質を、ここで一度だけ抽選する
-  S={pid,ver:5,year,era:eraText(year),q:0,age:0,t:0,mode:stepMonths(0)>=12?'y':'q',sm:stepMonths(0),switchAge:SWITCH_AGE[0]+rnd(SWITCH_AGE[1]-SWITCH_AGE[0]+1),policy:'交流',
+  S={pid,ver:5,year,era:eraText(year),rs:0,rv:1,slots:null,q:0,age:0,t:0,mode:stepMonths(0)>=12?'y':'q',sm:stepMonths(0),switchAge:SWITCH_AGE[0]+rnd(SWITCH_AGE[1]-SWITCH_AGE[0]+1),policy:'交流',
      stats:me.stats,tgt:me.tgt,star:me.star,sx:me.sx,tm:me.tm,
      skill:0,
      npc:P.npc.map((n,i)=>({name:n[0],rel:n[1],aff:n[2],from:n[3],known:n[3]===0,off:NPCOFF[pid][i],skill:NPCSK[pid][i],skillName:NPCSKN[pid][i],dead:false,deadAge:null,hist:[],extra:{},...mkPerson(P,NPCOFF[pid][i])})),
-     log:[],chron:[],pending:[],evSeen:{},ongoing:null,decision:null,decCount:0,nextDecT:13+rnd(3),nextSmallT:TIME.SMALL_FROM_AGE+Math.random()*2,smallLast:-1,dead:false,deathAge:null,cause:null,orphan:false};
+     log:[],chron:[],pending:[],evSeen:{},ongoing:null,decision:null,decCount:0,nextDecT:13+rnd(3),nextSmallT:TIME.SMALL_FROM_AGE+rand()*2,smallLast:-1,dead:false,deathAge:null,cause:null,orphan:false};
   S.npc.push(...makeFamily(pid));
   nameNpcs(S);
   stNew(S);

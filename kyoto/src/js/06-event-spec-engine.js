@@ -105,13 +105,13 @@ const evDecOk=d=>evDecWhy(d)==='';
 function evMag(k,v){
   if(!evNum(v)||!v)return 0;
   const s=v<0?-1:1,a=Math.min(3,Math.abs(v)),[lo,hi]=EV_BAND[k];let m=EV_MAP[k][a];
-  if(Math.random()<0.35)m+=Math.random()<0.5?-1:1;                       // 範囲内でだけ揺らす
+  if(rand()<0.35)m+=rand()<0.5?-1:1;                       // 範囲内でだけ揺らす
   return s*clamp(m,lo,hi);
 }
 function evFol(v){
   if(!evNum(v)||!v)return 0;
   const s=v<0?-1:1,a=Math.abs(v);let m=a;
-  if(Math.random()<0.35)m+=Math.random()<0.5?-1:1;
+  if(rand()<0.35)m+=rand()<0.5?-1:1;
   return s*((s>0&&a>=EV_FOL[0])?clamp(m,EV_FOL[0],EV_FOL[1]):clamp(m,1,2));
 }
 /* ---- 人物：役割に合う人を、知っていて存命の人から選ぶ。いなければ新しく生まれさせる ---- */
@@ -157,7 +157,7 @@ function evElig(e){
 function evW(e){let w=1/(1+evSeen(e.id).n);if(EV_POLG[S.policy]===e.g)w*=2;return w}
 function evChoose(list){
   if(!list.length)return null;
-  const ws=list.map(evW),sum=ws.reduce((a,b)=>a+b,0);let r=Math.random()*sum;
+  const ws=list.map(evW),sum=ws.reduce((a,b)=>a+b,0);let r=rand()*sum;
   for(let i=0;i<list.length;i++){r-=ws[i];if(r<=0)return list[i]}
   return list[list.length-1];
 }
@@ -217,7 +217,7 @@ function evFollowDue(p){
   const pn=(f.pi!=null&&S.npc[f.pi])?S.npc[f.pi]:null;
   let res='ok';
   if(sp.k==='D'){if(!pn||pn.dead||pn.aff<EV_D_AFF){addLog('c','返事はまだ出ていない。（保留のまま）',true);return}}
-  else if(sp.k==='B'||sp.k==='E'){res=(sp.ng&&evFx4(sp.ng.fx)&&Math.random()>=evProb(f.pi,sp.k))?'ng':'ok'}
+  else if(sp.k==='B'||sp.k==='E'){res=(sp.ng&&evFx4(sp.ng.fx)&&rand()>=evProb(f.pi,sp.k))?'ng':'ok'}
   const r=res==='ok'?sp.ok:sp.ng;
   addLog('r',r.x,true);
   const np={};if(pn&&!pn.dead&&r.af)np[f.pi]=r.af>0?evFol(r.af):-clamp(Math.abs(r.af),1,2);

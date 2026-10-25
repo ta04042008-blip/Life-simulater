@@ -24,28 +24,31 @@ function schedule(ms){
     evT.forEach(clearTimeout);evT=[];flushSlots();
     frame++;tick();render();showFx();playSeasons();
     if(S.decision||S.dead){resume=!!S.decision;stop();remaining=null;setBar(0,0);render();return}
-    slots=rollSlots();schedule(SPEEDS[speedIdx][0]);
+    slotsEnsure();schedule(SPEEDS[speedIdx][0]);
   },ms);
 }
 function start(){
   if(timer||S.decision||S.dead)return;
-  if(remaining==null)slots=rollSlots();
+  slotsEnsure();
   schedule(remaining!=null?Math.max(50,remaining):SPEEDS[speedIdx][0]);
   animT=setInterval(()=>{frame++;drawScene()},600);
   render();
 }
 function step(n,untilDecision){
   stop();resume=false;remaining=null;setBar(0,0);
-  const go1=()=>{if(S.decision||S.dead)return false;slots=rollSlots();flushSlots();return tick()};
+  const go1=()=>{if(S.decision||S.dead)return false;slotsEnsure();flushSlots();return tick()};
   for(let i=0;i<n;i++){if(!go1())break;if(S.dead||(untilDecision&&S.decision))break}
   if(untilDecision&&!S.decision&&!S.dead){let g=0;while(!S.decision&&!S.dead&&g++<400)go1()}
   render();showFx();
 }
-function randomBirth(){                                    // 生まれ年を西暦1〜1900年からランダムに引き、その年の時代の境遇を重みで選ぶ
+function randomBirth(){                                    // 生まれ年を西暦1〜1900年からランダムに引き、その年の時代の境遇を重みで選ぶ（人生の乱数 S.rs には触れない）
+  const run=typeof rngFree==='function'?rngFree:(f=>f());
+  return run(()=>{
   const y=1+rnd(1900),c=Object.keys(RANDW).filter(k=>y>=PERSONAS[k].yr[0]&&y<PERSONAS[k].yr[1]);
   const tot=c.reduce((a,k)=>a+RANDW[k],0);let r=Math.random()*tot;
   for(const k of c){r-=RANDW[k];if(r<0)return{pid:k,year:y}}
   return{pid:c[0]||'common',year:y};
+  });
 }
 const randomPersona=()=>randomBirth().pid;
 

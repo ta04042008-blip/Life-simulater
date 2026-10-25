@@ -74,7 +74,17 @@ test('legacy raw state is preserved before migration and new exported wrapper is
   const legacy=makeState();delete legacy.sv;
   x.ctx.legacy=legacy;
   assert.equal(x.run("saveRestore(legacy,'旧セーブ')"),true);
-  assert.equal(JSON.parse(x.db.get(key+'-premigrate')).sv,undefined);
+  const idx=JSON.parse(x.db.get(key+'-premigrate-index'));            // 原本は内容の指紋つきのキーに退避され、索引から辿れる
+  assert.equal(idx.length,1);
+  assert.equal(JSON.parse(x.db.get(idx[0].key)).sv,undefined);
+  const firstCopy=x.db.get(idx[0].key);
+  assert.equal(x.run("saveRestore(legacy,'旧セーブ')"),true);          // 同じ原本を何度読み込んでも、上書きも増殖もしない
+  assert.equal(JSON.parse(x.db.get(key+'-premigrate-index')).length,1);
+  assert.equal(x.db.get(idx[0].key),firstCopy);
+  const other=makeState();delete other.sv;other.age=30;x.ctx.other=other;   // 別の原本は別のキーで残す
+  assert.equal(x.run("saveRestore(other,'別の旧セーブ')"),true);
+  assert.equal(JSON.parse(x.db.get(key+'-premigrate-index')).length,2);
+  assert.equal(x.db.get(idx[0].key),firstCopy);
   const wrapped={format:'earth2000-kyoto-save',version:1,state:makeState()};
   x.ctx.wrapped=wrapped;
   assert.equal(x.run('savePrepare(wrapped).age'),14);

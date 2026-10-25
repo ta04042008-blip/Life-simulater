@@ -3,13 +3,13 @@
    人物の能力・★・気質（人物情報・能力・気質の実装指示書 v1.0）
    主人公と周りの人物に共通の仕組み。数値はすべてゲーム上の仮値で、史実や確定数値ではない。
    ===================================================================== */
-const gauss=()=>{let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+const gauss=()=>{let u=0,v=0;while(!u)u=rand();while(!v)v=rand();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
 /* 出生時の能力の範囲（項目ごとに違う）。3つの一様乱数の平均で引くので、中央付近が出やすく両端は珍しい */
 const AB_RANGE=[[120,300],[40,160],[100,260],[80,240]];
-const bell=(lo,hi)=>lo+(hi-lo)*(Math.random()+Math.random()+Math.random())/3;
+const bell=(lo,hi)=>lo+(hi-lo)*(rand()+rand()+rand())/3;
 /* ★（活動による成長のしやすさ）：1が標準で下限・5が上限。出生時は1が最多（仮）。能力の初期値とは別に引く（独立） */
 const STAR_W_BIRTH=[64,24,8,3,1],STAR_W_ADULT=[50,28,13,6,3];
-const drawStar=w=>{let r=Math.random()*100,a=0;for(let i=0;i<5;i++){a+=w[i];if(r<a)return i+1}return 1};
+const drawStar=w=>{let r=rand()*100,a=0;for(let i=0;i<5;i++){a+=w[i];if(r<a)return i+1}return 1};
 const starStr=v=>{v=Math.max(1,Math.min(5,Math.round(v)||1));return '★'.repeat(v)+'☆'.repeat(5-v)};   // 表示用：★が成長のしやすさ（1〜5）
 const STAR_MULT=[1,1.25,1.5,1.8,2.2];                 // 活動による成長だけに掛ける倍率（仮）
 const starMult=s=>STAR_MULT[clamp(Math.round(s)||1,1,5)-1];
@@ -58,7 +58,7 @@ function tmNudge(t,ax,dir,w,age,why){
 const tmWeight=(t,e)=>{const w=e.wt||1;if(!e.tm)return w;return w*clamp(1+e.tm[1]*(t.v[e.tm[0]]-50)/50*0.8,0.35,1.8)};
 function tmPick(t,pool){
   if(!pool.length)return null;
-  const ws=pool.map(e=>tmWeight(t,e)),sum=ws.reduce((a,b)=>a+b,0);let r=Math.random()*sum;
+  const ws=pool.map(e=>tmWeight(t,e)),sum=ws.reduce((a,b)=>a+b,0);let r=rand()*sum;
   for(let i=0;i<pool.length;i++){r-=ws[i];if(r<=0)return pool[i]}
   return pool[pool.length-1];
 }
@@ -134,7 +134,7 @@ const SMALL=[
         {l:'声をかけられるのを待つ',y:'……',x:'相手が話しかけるのを、静かに待った。',fx:[1,1,1,0],tm:[[0,-1,2]]}],
   extra:[]}
 ];
-const SMALL_GAP=yq=>yq?2+Math.random()*2:3+rnd(4);   // 次の小さな選択までの年数（仮）
+const SMALL_GAP=yq=>yq?2+rand()*2:3+rnd(4);   // 次の小さな選択までの年数（仮）
 function makeSmall(){
   let k;do{k=rnd(SMALL.length)}while(SMALL.length>1&&k===S.smallLast);S.smallLast=k;
   const d=SMALL[k],opts=d.opts.map(o=>JSON.parse(JSON.stringify(o)));
@@ -160,21 +160,30 @@ function mkPerson(P,age){
 const NPC_STAM_LINK=true;
 function npcLife(n,a,yrs,yq){
   natStep(n,a,yrs,yq);
-  if(a>=3&&a<65&&Math.random()<(yq?0.15:0.6)){
+  if(a>=3&&a<65&&rand()<(yq?0.15:0.6)){
     const i=rnd(4),amt=a<13?5:9;
     n.stats[i]=clamp(n.stats[i]+amt*starMult(n.star[i])*SAT(n.stats[i]),0,1000);xpAdd(n,i,amt*XP_NPC);
   }
   xpDecay(n,yrs,a,XP_DECAY_NPC);
   for(let i=0;i<4;i++)starCheck(n,i,null);
-  if(Math.random()<(a<13?1.2:0.6)*yrs){const e=tmPick(n.tm,a<13?TMEV_KID:TMEV);if(e)tmNudge(n.tm,e.tm[0],e.tm[1],e.tm[2],a,e.x)}
+  if(rand()<(a<13?1.2:0.6)*yrs){const e=tmPick(n.tm,a<13?TMEV_KID:TMEV);if(e)tmNudge(n.tm,e.tm[0],e.tm[1],e.tm[2],a,e.x)}
   tmCheck(n.tm,a);
 }
 /* 旧セーブ（版4）の読み込み：足りない項目だけを、一度だけ補う。補う値は人物ごとの固定の種で引くので、同じ旧セーブを何度開いても同じになる。
    既存の能力値（0〜1000）はそのまま使う（10倍などはしない）。存在しない幼少期の履歴は作らない */
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
-function seeded(seed,fn){const o=Math.random;Math.random=mulberry(seed);try{return fn()}finally{Math.random=o}}
+function seeded(seed,fn){return rngDetached(seed,fn)}      // 種から決まる乱数を一時的に使う（人生の乱数 S.rs は動かさない）
+/* 読み込み・移行の間は、人生の乱数 S.rs に触れない。補完に使う乱数は、保存の中身（または保存済みの種）から決まる固定の列にする */
 function migrate(s){
+  const seed=((s&&s.rs!=null?s.rs:hash(JSON.stringify(s)))^0x51ED270B)>>>0;
+  return rngDetached(seed,()=>migrateBody(s));
+}
+function migrateBody(s){
   const P=PERSONAS[s.pid];if(!P||!Array.isArray(s.npc)||!Array.isArray(s.stats))throw new Error('読み込めない形式');
+  /* 乱数の状態（v1.7 単位2）：旧セーブには無いので一度だけ補う。種は旧セーブの中身から決める（同じ旧セーブは何度開いても同じ種になり、
+     補ったあとの人生は S.rs を保存するので以後は引き直さない）。すでに持っている保存は、そのまま使う */
+  if(s.rs==null){s.rs=(hash(JSON.stringify(s))^0x9E3779B9)>>>0;s.rv=1}
+  if(!Array.isArray(s.slots))s.slots=null;
   if(!Array.isArray(s.tgt))s.tgt=P.stats.slice();
   if(!Array.isArray(s.sx))s.sx=[0,0,0,0];
   if(!s.evSeen||typeof s.evSeen!=='object')s.evSeen={};

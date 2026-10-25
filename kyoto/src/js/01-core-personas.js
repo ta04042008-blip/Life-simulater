@@ -18,7 +18,23 @@ const POLICIES={
   '学び':[-1,5,1,0],'仕事':[3,2,-1,0],'交流':[0,1,2,4],'家族':[1,0,3,1],'休養':[5,0,2,0]
 };
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const rnd=n=>Math.floor(Math.random()*n);
+/* ---------- 乱数（v1.7 単位2）----------
+   ゲーム結果に影響する乱数はすべて rand() を通す。状態は 32bit の整数1つ（S.rs）で、毎回 S に書き戻すので、保存・復元で続きが一致する。
+   画面の演出だけの乱数は Math.random() を使い、ここには触れない（見るだけ・操作の間隔でゲームの未来が変わらないようにする）。 */
+let RS=(()=>{try{return crypto.getRandomValues(new Uint32Array(1))[0]|0}catch(e){return (Date.now()^(Math.random()*4294967296))|0}})();
+let RSW=null,RSL=false;                      // RSW: S.rs に最後に書いた値（読み込みで S が差し替わったことの検出用）／RSL: 人生と切り離して使う間は true
+function rngEntropy(){try{return crypto.getRandomValues(new Uint32Array(1))[0]}catch(e){return (Date.now()^(Math.random()*4294967296))>>>0}}
+function rngNext(){RS=(RS+0x6D2B79F5)|0;let t=Math.imul(RS^RS>>>15,1|RS);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+function rand(){
+  if(!RSL&&S&&Number.isInteger(S.rs)&&S.rs!==RSW)RS=S.rs|0;          // 保存から読み込んだ人生なら、その状態から続ける
+  const v=rngNext();
+  if(!RSL&&S&&Number.isInteger(S.rs)){S.rs=RS>>>0;RSW=S.rs}
+  return v;
+}
+/* 人生と切り離した乱数（誕生の抽選・旧セーブの補完）。終わると元の状態に戻す */
+function rngDetached(seed,fn){const sRS=RS,sL=RSL;RSL=true;RS=(seed==null?rngEntropy():seed)|0;try{return fn()}finally{RS=sRS;RSL=sL}}
+const rngFree=fn=>rngDetached(null,fn);
+const rnd=n=>Math.floor(rand()*n);
 
 const PERSONAS={
   aristocrat:{label:'上層貴族',name:'若君',place:'京都・貴族の邸宅',era:'平安（1000年頃）',year:1000,age:15,

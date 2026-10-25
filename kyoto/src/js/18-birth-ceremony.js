@@ -13,7 +13,7 @@ const bthEnd=()=>{bthTimers.forEach(clearTimeout);bthTimers=[];const el=$('bth')
 function bthConfetti(){
   const box=document.createElement('div');box.className='cfet';box.setAttribute('aria-hidden','true');
   const cols=['var(--accent)','var(--good)','var(--s-know)','var(--s-will)','var(--s-charm)','var(--warn)'];
-  box.innerHTML=Array.from({length:40},(_,i)=>`<i style="left:${rnd(100)}%;background:${cols[i%cols.length]};animation-delay:${(Math.random()*.6).toFixed(2)}s;animation-duration:${(1.4+Math.random()).toFixed(2)}s"></i>`).join('');
+  box.innerHTML=Array.from({length:40},(_,i)=>`<i style="left:${Math.floor(Math.random()*100)}%;background:${cols[i%cols.length]};animation-delay:${(Math.random()*.6).toFixed(2)}s;animation-duration:${(1.4+Math.random()).toFixed(2)}s"></i>`).join('');
   document.body.appendChild(box);setTimeout(()=>box.remove(),2800);
 }
 /* ランダムで、その境遇に生まれる確率（％）：年が一様、その年に生まれうる境遇の重みで決まる */
@@ -88,7 +88,7 @@ function birthCeremony(rand){
   function cert(){
     const fam=S.npc.filter(n=>n.rel==='家族'&&n.known&&!n.dead);
     const older=S.npc.filter(n=>n.rel==='家族'&&n.known&&['兄','姉','次兄','次姉'].includes(n.role)).length;
-    showStep(`<div class="cert"><div class="h2"><div><h1>出生届</h1><span class="no">${S.era}・第${100+rnd(9899)}号</span></div><div class="stampc" aria-hidden="true">受理</div></div>
+    showStep(`<div class="cert"><div class="h2"><div><h1>出生届</h1><span class="no">${S.era}・第${100+hash(S.lid||S.pid)%9899}号</span></div><div class="stampc" aria-hidden="true">受理</div></div>
       <dl>
         <dt>子の名前</dt><dd><input id="bnm" value="${S.myName}" maxlength="12" aria-label="名前" autocomplete="off"><div style="font-size:13.33px;color:var(--muted);font-family:var(--font-sub)">名前は書きかえられる</div></dd>
         <dt>生まれた時</dt><dd>${yr}年（${eraName(yr)}）の春${older?`・第${older+1}子`:''}</dd>

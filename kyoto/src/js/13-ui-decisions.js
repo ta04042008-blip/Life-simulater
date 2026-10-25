@@ -29,12 +29,14 @@ function fireLearn(){
   S.skill=clamp(S.skill+e.sk*(yq?0.2:0.5),0,1000);
 }
 function rollSlots(){
-  const sm=stepMonths(S.age),yq=S.age<TIME.ADULT_FROM,ne=yq?sm/3:sm/6,list=[];     // 画面の1回分の長さに比例（旧: 3か月=1回、1年=2回）
-  for(let i=0;i<ne;i++)if(Math.random()<0.6)list.push({k:'o',at:0.1+Math.random()*0.8});
+  const k=stepMonths(S.age)/3,sm=(k-(S.q%k))*3,yq=S.age<TIME.ADULT_FROM,ne=yq?sm/3:sm/6,list=[];     // この回の残りの長さに比例（旧: 3か月=1回、1年=2回）
+  for(let i=0;i<ne;i++)if(rand()<0.6)list.push({k:'o',at:0.1+rand()*0.8});
   const nl=yq?sm/3:1,pl=yq?0.5:0.5*sm/12;
-  if(S.age>=6&&(S.policy==='学び'||(S.policy==='仕事'&&S.age>=13)))for(let i=0;i<nl;i++)if(Math.random()<pl)list.push({k:'l',at:0.1+Math.random()*0.8});
+  if(S.age>=6&&(S.policy==='学び'||(S.policy==='仕事'&&S.age>=13)))for(let i=0;i<nl;i++)if(rand()<pl)list.push({k:'l',at:0.1+rand()*0.8});
   return list.sort((a,b)=>a.at-b.at);
 }
+/* ゲージの途中イベントの予定は S.slots に持つ（保存される）。引くのは一度だけで、再読み込みや停止・再開で引き直さない */
+function slotsEnsure(){if(!S)return;if(!Array.isArray(S.slots))S.slots=rollSlots();slots=S.slots}
 function runSlot(s){
   const i=slots.indexOf(s);if(i<0)return;slots.splice(i,1);
   if(!S||S.dead||S.decision)return;
@@ -57,6 +59,7 @@ function tick(){
   const k=stepMonths(S.age)/3,n=k-(S.q%k);                  // この回の残り四半期数（保存・再開の途中でも境目に揃う）
   for(let i=0;i<n;i++){tickQ();if(S.dead||S.decision)break}
   if(S.q%k===0)S.tk=(S.tk||0)+1;                            // 外側の進行（画面の1回分）の回数。本人の確認待ちの期限の基準
+  S.slots=null;                                             // この回のゲージの途中イベントは使い切った（次の回の分は slotsEnsure() が引く）
   syncStep();
   return true;
 }
@@ -89,7 +92,7 @@ function tickQ(){
     }
     return clamp(v+g,0,1000)});
   xpDecay(S,yrs,S.age,XP_DECAY_ME);starAll();   // 使わない力は、★の経験値がゆっくり減る（13歳から）
-  S.npc.forEach(n=>{if(n.known&&!n.dead)n.aff=clamp(n.aff+(S.policy==='交流'?(ad?(Math.random()<0.25?1:0):1):0)+(rnd(5)-2),0,100)});
+  S.npc.forEach(n=>{if(n.known&&!n.dead)n.aff=clamp(n.aff+(S.policy==='交流'?(ad?(rand()<0.25?1:0):1):0)+(rnd(5)-2),0,100)});
   tmReport();                               // 主人公の気質：表示の開始・文字の変化
   // skill (hidden 0-1000; only the level is shown)
   if(S.age>=6){
@@ -106,7 +109,7 @@ function tickQ(){
     if(a<0)return;                       // まだ生まれていない弟妹
     npcLife(n,a,yrs,yq);                 // 自分なりの活動・★・気質の変化（主人公の選択とは別）
     const hz=annualHazard(a,NPC_STAM_LINK?n.stats[0]:clamp(560-Math.max(0,a-35)*5,150,600),null);
-    if(a>=MAXAGE||Math.random()<1-Math.exp(-hz.tot*yrs)){
+    if(a>=MAXAGE||rand()<1-Math.exp(-hz.tot*yrs)){
       n.dead=true;n.deadAge=a;
       if(n.known){
         addLog('c',`${n.name}が亡くなった。`,true);hist(i,`亡くなった（${approxAge(a)}）`);lastBubble='…';
@@ -133,8 +136,8 @@ function tickQ(){
     if(--S.ongoing.left<=0){addLog('c','体調がすっかり戻った。',true);S.ongoing=null}
   }else{
     const pill=(0.05+S.age/1500)*(ad?0.75:1)*(S.age<6?1.6:1);
-    if(Math.random()<pill){
-      const sev=Math.random()<0.05+S.age/1200;
+    if(rand()<pill){
+      const sev=rand()<0.05+S.age/1200;
       S.ongoing={name:sev?'重い病':'風邪',mult:sev?HZ.sevMult:HZ.illMult,left:ad?4:1+rnd(2)};
       const d=sev?150:60;S.stats[0]=clamp(S.stats[0]-d,0,1000);popQ.push([0,-d]);emo('self','sad');if(sev){S.sx[0]-=70;starAll()}   /* 重い病は、体力の伸びやすさを下げることがある（特別な経験） */
       lastBubble=sev?'ううっ…':'ゴホゴホ…';
@@ -144,16 +147,16 @@ function tickQ(){
   stHlSync();
   // death (age-based hazard, raised by low stamina, illness and accidents)
   const h=annualHazard(S.age,S.stats[0],S.ongoing);
-  if(S.age>=MAXAGE||Math.random()<1-Math.exp(-h.tot*yrs)){die(h);saveAutoSoon();return true}
+  if(S.age>=MAXAGE||rand()<1-Math.exp(-h.tot*yrs)){die(h);saveAutoSoon();return true}
   // decision
   if(S.age>=13&&S.t>=S.nextDecT){
-    let d=Math.random()<0.85?evPick('b'):null;       // 設計案の大きな選択（なければ従来の決断）
+    let d=rand()<0.85?evPick('b'):null;       // 設計案の大きな選択（なければ従来の決断）
     if(!d){d=P.dec[S.decCount%P.dec.length];
     for(let k=0;k<P.dec.length;k++){const c=P.dec[(S.decCount+k)%P.dec.length],pn=S.npc[c.who];if(pn&&pn.known&&!pn.dead){d=c;break}}}   /* 相手がいる決断を優先 */
     S.decision=d;lastBubble='どうしよう…！';S.decCount++;S.nextDecT=S.t+(ad?3+rnd(4):2+rnd(3));
     S.nextSmallT=Math.max(S.nextSmallT,S.t+1);
   }else if(S.age>=TIME.SMALL_FROM_AGE&&S.t>=S.nextSmallT){     // 小さな選択：選ぶまで時間が止まる
-    S.decision=(Math.random()<0.85&&evPick('s'))||makeSmall();lastBubble='どうしよう…';S.nextSmallT=S.t+SMALL_GAP(!ad);
+    S.decision=(rand()<0.85&&evPick('s'))||makeSmall();lastBubble='どうしよう…';S.nextSmallT=S.t+SMALL_GAP(!ad);
   }
   saveAutoSoon();
   return true;

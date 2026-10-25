@@ -27,7 +27,7 @@ function stNew(s){
   if(typeof s.sv==='number'&&s.sv>ST_VER)throw new Error('新しい版のセーブデータです');
   const old=!s.sv;
   if(typeof s.mo!=='number')s.mo=Math.round((s.t||0)*12);                // 旧保存は移行時の月から。さかのぼって収支や予定を作らない
-  if(!s.lid)s.lid='L'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36);
+  if(!s.lid)s.lid=s.rs?'M'+s.rs.toString(36):'L'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36);   // 旧セーブの移行では乱数の種から決める（開くたびに変わらない）
   if(typeof s.seq!=='number')s.seq=0;
   if(typeof s.nid!=='number')s.nid=0;
   if(!s.done||typeof s.done!=='object')s.done={};

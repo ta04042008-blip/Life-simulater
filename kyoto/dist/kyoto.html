@@ -397,7 +397,23 @@ const POLICIES={
   '学び':[-1,5,1,0],'仕事':[3,2,-1,0],'交流':[0,1,2,4],'家族':[1,0,3,1],'休養':[5,0,2,0]
 };
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const rnd=n=>Math.floor(Math.random()*n);
+/* ---------- 乱数（v1.7 単位2）----------
+   ゲーム結果に影響する乱数はすべて rand() を通す。状態は 32bit の整数1つ（S.rs）で、毎回 S に書き戻すので、保存・復元で続きが一致する。
+   画面の演出だけの乱数は Math.random() を使い、ここには触れない（見るだけ・操作の間隔でゲームの未来が変わらないようにする）。 */
+let RS=(()=>{try{return crypto.getRandomValues(new Uint32Array(1))[0]|0}catch(e){return (Date.now()^(Math.random()*4294967296))|0}})();
+let RSW=null,RSL=false;                      // RSW: S.rs に最後に書いた値（読み込みで S が差し替わったことの検出用）／RSL: 人生と切り離して使う間は true
+function rngEntropy(){try{return crypto.getRandomValues(new Uint32Array(1))[0]}catch(e){return (Date.now()^(Math.random()*4294967296))>>>0}}
+function rngNext(){RS=(RS+0x6D2B79F5)|0;let t=Math.imul(RS^RS>>>15,1|RS);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+function rand(){
+  if(!RSL&&S&&Number.isInteger(S.rs)&&S.rs!==RSW)RS=S.rs|0;          // 保存から読み込んだ人生なら、その状態から続ける
+  const v=rngNext();
+  if(!RSL&&S&&Number.isInteger(S.rs)){S.rs=RS>>>0;RSW=S.rs}
+  return v;
+}
+/* 人生と切り離した乱数（誕生の抽選・旧セーブの補完）。終わると元の状態に戻す */
+function rngDetached(seed,fn){const sRS=RS,sL=RSL;RSL=true;RS=(seed==null?rngEntropy():seed)|0;try{return fn()}finally{RS=sRS;RSL=sL}}
+const rngFree=fn=>rngDetached(null,fn);
+const rnd=n=>Math.floor(rand()*n);
 
 const PERSONAS={
   aristocrat:{label:'上層貴族',name:'若君',place:'京都・貴族の邸宅',era:'平安（1000年頃）',year:1000,age:15,
@@ -503,13 +519,13 @@ for(const k in PERSONAS){const P=PERSONAS[k];P.npc.forEach((n,i)=>{n[3]=k==='art
    人物の能力・★・気質（人物情報・能力・気質の実装指示書 v1.0）
    主人公と周りの人物に共通の仕組み。数値はすべてゲーム上の仮値で、史実や確定数値ではない。
    ===================================================================== */
-const gauss=()=>{let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+const gauss=()=>{let u=0,v=0;while(!u)u=rand();while(!v)v=rand();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
 /* 出生時の能力の範囲（項目ごとに違う）。3つの一様乱数の平均で引くので、中央付近が出やすく両端は珍しい */
 const AB_RANGE=[[120,300],[40,160],[100,260],[80,240]];
-const bell=(lo,hi)=>lo+(hi-lo)*(Math.random()+Math.random()+Math.random())/3;
+const bell=(lo,hi)=>lo+(hi-lo)*(rand()+rand()+rand())/3;
 /* ★（活動による成長のしやすさ）：1が標準で下限・5が上限。出生時は1が最多（仮）。能力の初期値とは別に引く（独立） */
 const STAR_W_BIRTH=[64,24,8,3,1],STAR_W_ADULT=[50,28,13,6,3];
-const drawStar=w=>{let r=Math.random()*100,a=0;for(let i=0;i<5;i++){a+=w[i];if(r<a)return i+1}return 1};
+const drawStar=w=>{let r=rand()*100,a=0;for(let i=0;i<5;i++){a+=w[i];if(r<a)return i+1}return 1};
 const starStr=v=>{v=Math.max(1,Math.min(5,Math.round(v)||1));return '★'.repeat(v)+'☆'.repeat(5-v)};   // 表示用：★が成長のしやすさ（1〜5）
 const STAR_MULT=[1,1.25,1.5,1.8,2.2];                 // 活動による成長だけに掛ける倍率（仮）
 const starMult=s=>STAR_MULT[clamp(Math.round(s)||1,1,5)-1];
@@ -558,7 +574,7 @@ function tmNudge(t,ax,dir,w,age,why){
 const tmWeight=(t,e)=>{const w=e.wt||1;if(!e.tm)return w;return w*clamp(1+e.tm[1]*(t.v[e.tm[0]]-50)/50*0.8,0.35,1.8)};
 function tmPick(t,pool){
   if(!pool.length)return null;
-  const ws=pool.map(e=>tmWeight(t,e)),sum=ws.reduce((a,b)=>a+b,0);let r=Math.random()*sum;
+  const ws=pool.map(e=>tmWeight(t,e)),sum=ws.reduce((a,b)=>a+b,0);let r=rand()*sum;
   for(let i=0;i<pool.length;i++){r-=ws[i];if(r<=0)return pool[i]}
   return pool[pool.length-1];
 }
@@ -634,7 +650,7 @@ const SMALL=[
         {l:'声をかけられるのを待つ',y:'……',x:'相手が話しかけるのを、静かに待った。',fx:[1,1,1,0],tm:[[0,-1,2]]}],
   extra:[]}
 ];
-const SMALL_GAP=yq=>yq?2+Math.random()*2:3+rnd(4);   // 次の小さな選択までの年数（仮）
+const SMALL_GAP=yq=>yq?2+rand()*2:3+rnd(4);   // 次の小さな選択までの年数（仮）
 function makeSmall(){
   let k;do{k=rnd(SMALL.length)}while(SMALL.length>1&&k===S.smallLast);S.smallLast=k;
   const d=SMALL[k],opts=d.opts.map(o=>JSON.parse(JSON.stringify(o)));
@@ -660,21 +676,30 @@ function mkPerson(P,age){
 const NPC_STAM_LINK=true;
 function npcLife(n,a,yrs,yq){
   natStep(n,a,yrs,yq);
-  if(a>=3&&a<65&&Math.random()<(yq?0.15:0.6)){
+  if(a>=3&&a<65&&rand()<(yq?0.15:0.6)){
     const i=rnd(4),amt=a<13?5:9;
     n.stats[i]=clamp(n.stats[i]+amt*starMult(n.star[i])*SAT(n.stats[i]),0,1000);xpAdd(n,i,amt*XP_NPC);
   }
   xpDecay(n,yrs,a,XP_DECAY_NPC);
   for(let i=0;i<4;i++)starCheck(n,i,null);
-  if(Math.random()<(a<13?1.2:0.6)*yrs){const e=tmPick(n.tm,a<13?TMEV_KID:TMEV);if(e)tmNudge(n.tm,e.tm[0],e.tm[1],e.tm[2],a,e.x)}
+  if(rand()<(a<13?1.2:0.6)*yrs){const e=tmPick(n.tm,a<13?TMEV_KID:TMEV);if(e)tmNudge(n.tm,e.tm[0],e.tm[1],e.tm[2],a,e.x)}
   tmCheck(n.tm,a);
 }
 /* 旧セーブ（版4）の読み込み：足りない項目だけを、一度だけ補う。補う値は人物ごとの固定の種で引くので、同じ旧セーブを何度開いても同じになる。
    既存の能力値（0〜1000）はそのまま使う（10倍などはしない）。存在しない幼少期の履歴は作らない */
 const mulberry=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
-function seeded(seed,fn){const o=Math.random;Math.random=mulberry(seed);try{return fn()}finally{Math.random=o}}
+function seeded(seed,fn){return rngDetached(seed,fn)}      // 種から決まる乱数を一時的に使う（人生の乱数 S.rs は動かさない）
+/* 読み込み・移行の間は、人生の乱数 S.rs に触れない。補完に使う乱数は、保存の中身（または保存済みの種）から決まる固定の列にする */
 function migrate(s){
+  const seed=((s&&s.rs!=null?s.rs:hash(JSON.stringify(s)))^0x51ED270B)>>>0;
+  return rngDetached(seed,()=>migrateBody(s));
+}
+function migrateBody(s){
   const P=PERSONAS[s.pid];if(!P||!Array.isArray(s.npc)||!Array.isArray(s.stats))throw new Error('読み込めない形式');
+  /* 乱数の状態（v1.7 単位2）：旧セーブには無いので一度だけ補う。種は旧セーブの中身から決める（同じ旧セーブは何度開いても同じ種になり、
+     補ったあとの人生は S.rs を保存するので以後は引き直さない）。すでに持っている保存は、そのまま使う */
+  if(s.rs==null){s.rs=(hash(JSON.stringify(s))^0x9E3779B9)>>>0;s.rv=1}
+  if(!Array.isArray(s.slots))s.slots=null;
   if(!Array.isArray(s.tgt))s.tgt=P.stats.slice();
   if(!Array.isArray(s.sx))s.sx=[0,0,0,0];
   if(!s.evSeen||typeof s.evSeen!=='object')s.evSeen={};
@@ -842,14 +867,14 @@ function makeFamily(pid){
   const mk=(name,aff,off,skill,from,fromText)=>({name:name,rel:'家族',aff,from,known:from===0,off,skill,skillName:P.skillName,dead:false,deadAge:null,hist:[],extra:{},fromText:fromText||null,...mkPerson(P,Math.max(0,off))});
   const need=FAMNEED[pid];let missing=0;
   need.forEach(r=>{
-    if(Math.random()<FAM_MISS&&!(need.length===2&&missing===1)){missing++}
+    if(rand()<FAM_MISS&&!(need.length===2&&missing===1)){missing++}
     else out.push(mk(r,r==='母'?58:52,r==='母'?26:30,400+rnd(250),0));
   });
   if(missing>0)out.push(mk('祖母',55,52,400+rnd(200),0));
-  const r=Math.random(),cnt=r<FAM_SIB[0]/100?0:r<(FAM_SIB[0]+FAM_SIB[1])/100?1:2;
+  const r=rand(),cnt=r<FAM_SIB[0]/100?0:r<(FAM_SIB[0]+FAM_SIB[1])/100?1:2;
   const ELD=[['兄','姉'],['次兄','次姉']],YNG=[['弟','妹'],['末弟','末妹']];let e=0,y=0;
   for(let i=0;i<cnt;i++){
-    if(Math.random()<FAM_ELDER)out.push(mk(ELD[e++][rnd(2)],35+rnd(20),2+rnd(5),100+rnd(150),0));
+    if(rand()<FAM_ELDER)out.push(mk(ELD[e++][rnd(2)],35+rnd(20),2+rnd(5),100+rnd(150),0));
     else{const off=-(2+rnd(3));out.push(mk(YNG[y++][rnd(2)],42+rnd(14),off,40,-off,'が生まれた。'))}
   }
   return out;
@@ -858,13 +883,18 @@ function nameOf(){const P=PERSONAS[S.pid];if(S.myName)return S.myName;return S.a
 function dateLabel(){return S.mode==='q'?`${S.year}年${QL[S.q]}`:`${S.year}年`}
 function newGame(pid,year){
   evHide();
+  // 新しい人生は自分の乱数の種を持つ。作り終わるまでは前の人生の乱数に触れず、最後に状態を S.rs へ書く
+  const sRS=RS,sL=RSL;if(!sL)RS=rngEntropy()|0;RSL=true;               // すでに種を決めた乱数の中（検査など）なら、その続きを使う
+  try{newGameBody(pid,year);S.rs=RS>>>0;RSW=S.rs;RSL=sL}catch(e){RS=sRS;RSL=sL;throw e}
+}
+function newGameBody(pid,year){
   const P=PERSONAS[pid],me=mkPerson(P,0);
   if(year==null)year=P.yr[0]+rnd(P.yr[1]-P.yr[0]);      // 生まれ年：境遇の時代の中でランダム     // 出生時の能力・★・気質を、ここで一度だけ抽選する
-  S={pid,ver:5,year,era:eraText(year),q:0,age:0,t:0,mode:stepMonths(0)>=12?'y':'q',sm:stepMonths(0),switchAge:SWITCH_AGE[0]+rnd(SWITCH_AGE[1]-SWITCH_AGE[0]+1),policy:'交流',
+  S={pid,ver:5,year,era:eraText(year),rs:0,rv:1,slots:null,q:0,age:0,t:0,mode:stepMonths(0)>=12?'y':'q',sm:stepMonths(0),switchAge:SWITCH_AGE[0]+rnd(SWITCH_AGE[1]-SWITCH_AGE[0]+1),policy:'交流',
      stats:me.stats,tgt:me.tgt,star:me.star,sx:me.sx,tm:me.tm,
      skill:0,
      npc:P.npc.map((n,i)=>({name:n[0],rel:n[1],aff:n[2],from:n[3],known:n[3]===0,off:NPCOFF[pid][i],skill:NPCSK[pid][i],skillName:NPCSKN[pid][i],dead:false,deadAge:null,hist:[],extra:{},...mkPerson(P,NPCOFF[pid][i])})),
-     log:[],chron:[],pending:[],evSeen:{},ongoing:null,decision:null,decCount:0,nextDecT:13+rnd(3),nextSmallT:TIME.SMALL_FROM_AGE+Math.random()*2,smallLast:-1,dead:false,deathAge:null,cause:null,orphan:false};
+     log:[],chron:[],pending:[],evSeen:{},ongoing:null,decision:null,decCount:0,nextDecT:13+rnd(3),nextSmallT:TIME.SMALL_FROM_AGE+rand()*2,smallLast:-1,dead:false,deathAge:null,cause:null,orphan:false};
   S.npc.push(...makeFamily(pid));
   nameNpcs(S);
   stNew(S);
@@ -1000,13 +1030,13 @@ const evDecOk=d=>evDecWhy(d)==='';
 function evMag(k,v){
   if(!evNum(v)||!v)return 0;
   const s=v<0?-1:1,a=Math.min(3,Math.abs(v)),[lo,hi]=EV_BAND[k];let m=EV_MAP[k][a];
-  if(Math.random()<0.35)m+=Math.random()<0.5?-1:1;                       // 範囲内でだけ揺らす
+  if(rand()<0.35)m+=rand()<0.5?-1:1;                       // 範囲内でだけ揺らす
   return s*clamp(m,lo,hi);
 }
 function evFol(v){
   if(!evNum(v)||!v)return 0;
   const s=v<0?-1:1,a=Math.abs(v);let m=a;
-  if(Math.random()<0.35)m+=Math.random()<0.5?-1:1;
+  if(rand()<0.35)m+=rand()<0.5?-1:1;
   return s*((s>0&&a>=EV_FOL[0])?clamp(m,EV_FOL[0],EV_FOL[1]):clamp(m,1,2));
 }
 /* ---- 人物：役割に合う人を、知っていて存命の人から選ぶ。いなければ新しく生まれさせる ---- */
@@ -1052,7 +1082,7 @@ function evElig(e){
 function evW(e){let w=1/(1+evSeen(e.id).n);if(EV_POLG[S.policy]===e.g)w*=2;return w}
 function evChoose(list){
   if(!list.length)return null;
-  const ws=list.map(evW),sum=ws.reduce((a,b)=>a+b,0);let r=Math.random()*sum;
+  const ws=list.map(evW),sum=ws.reduce((a,b)=>a+b,0);let r=rand()*sum;
   for(let i=0;i<list.length;i++){r-=ws[i];if(r<=0)return list[i]}
   return list[list.length-1];
 }
@@ -1112,7 +1142,7 @@ function evFollowDue(p){
   const pn=(f.pi!=null&&S.npc[f.pi])?S.npc[f.pi]:null;
   let res='ok';
   if(sp.k==='D'){if(!pn||pn.dead||pn.aff<EV_D_AFF){addLog('c','返事はまだ出ていない。（保留のまま）',true);return}}
-  else if(sp.k==='B'||sp.k==='E'){res=(sp.ng&&evFx4(sp.ng.fx)&&Math.random()>=evProb(f.pi,sp.k))?'ng':'ok'}
+  else if(sp.k==='B'||sp.k==='E'){res=(sp.ng&&evFx4(sp.ng.fx)&&rand()>=evProb(f.pi,sp.k))?'ng':'ok'}
   const r=res==='ok'?sp.ok:sp.ng;
   addLog('r',r.x,true);
   const np={};if(pn&&!pn.dead&&r.af)np[f.pi]=r.af>0?evFol(r.af):-clamp(Math.abs(r.af),1,2);
@@ -1150,7 +1180,7 @@ function stNew(s){
   if(typeof s.sv==='number'&&s.sv>ST_VER)throw new Error('新しい版のセーブデータです');
   const old=!s.sv;
   if(typeof s.mo!=='number')s.mo=Math.round((s.t||0)*12);                // 旧保存は移行時の月から。さかのぼって収支や予定を作らない
-  if(!s.lid)s.lid='L'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36);
+  if(!s.lid)s.lid=s.rs?'M'+s.rs.toString(36):'L'+Date.now().toString(36)+Math.floor(Math.random()*1e6).toString(36);   // 旧セーブの移行では乱数の種から決める（開くたびに変わらない）
   if(typeof s.seq!=='number')s.seq=0;
   if(typeof s.nid!=='number')s.nid=0;
   if(!s.done||typeof s.done!=='object')s.done={};
@@ -1663,7 +1693,7 @@ function thStep(th){
   const pi=npcIdx(th.tid||th.pid);
   if(th.sk==='ask'){
     th.st='相手返答待ち';
-    if(!th.res)th.res=th.jd==='c'?'ok':(Math.random()<evProb(pi>=0?pi:null,'B')?'ok':'ng');   // 抽選は実行条件が揃った時に一度だけ
+    if(!th.res)th.res=th.jd==='c'?'ok':(rand()<evProb(pi>=0?pi:null,'B')?'ok':'ng');   // 抽選は実行条件が揃った時に一度だけ
     thResolve(th,th.res);
   }else if(th.sk==='plan'){
     if(th.tm&&frLeft()<th.tm){
@@ -1673,7 +1703,7 @@ function thStep(th){
     }
     if(th.tm)frTake(th.tm);
     let res='ok';
-    if(th.jd==='E'){if(!th.res)th.res=Math.random()<evProb(npcIdx(th.pid),'E')?'ok':'ng';res=th.res}
+    if(th.jd==='E'){if(!th.res)th.res=rand()<evProb(npcIdx(th.pid),'E')?'ok':'ng';res=th.res}
     thResolve(th,res);
   }else if(th.sk==='search'){
     const c=th.cd?stCand(th):-1;
@@ -1947,7 +1977,7 @@ function eventPool(){
 function causeOf(h){
   if(S.age>=MAXAGE)return '老衰';
   const base=h.old*h.mb+h.kid,ill=S.ongoing?h.old*h.mb*(h.mi-1)+h.kid*(h.mi-1)*0.4:0;
-  const r=Math.random()*(h.acc+base+ill);
+  const r=rand()*(h.acc+base+ill);
   if(r<h.acc)return '事故';
   if(r<h.acc+ill)return S.ongoing.name==='風邪'?'風邪をこじらせて':'重い病';
   return S.age<6?'幼くして病':S.age>=65?'老衰':'体力の衰え・病';
@@ -1987,12 +2017,14 @@ function fireLearn(){
   S.skill=clamp(S.skill+e.sk*(yq?0.2:0.5),0,1000);
 }
 function rollSlots(){
-  const sm=stepMonths(S.age),yq=S.age<TIME.ADULT_FROM,ne=yq?sm/3:sm/6,list=[];     // 画面の1回分の長さに比例（旧: 3か月=1回、1年=2回）
-  for(let i=0;i<ne;i++)if(Math.random()<0.6)list.push({k:'o',at:0.1+Math.random()*0.8});
+  const k=stepMonths(S.age)/3,sm=(k-(S.q%k))*3,yq=S.age<TIME.ADULT_FROM,ne=yq?sm/3:sm/6,list=[];     // この回の残りの長さに比例（旧: 3か月=1回、1年=2回）
+  for(let i=0;i<ne;i++)if(rand()<0.6)list.push({k:'o',at:0.1+rand()*0.8});
   const nl=yq?sm/3:1,pl=yq?0.5:0.5*sm/12;
-  if(S.age>=6&&(S.policy==='学び'||(S.policy==='仕事'&&S.age>=13)))for(let i=0;i<nl;i++)if(Math.random()<pl)list.push({k:'l',at:0.1+Math.random()*0.8});
+  if(S.age>=6&&(S.policy==='学び'||(S.policy==='仕事'&&S.age>=13)))for(let i=0;i<nl;i++)if(rand()<pl)list.push({k:'l',at:0.1+rand()*0.8});
   return list.sort((a,b)=>a.at-b.at);
 }
+/* ゲージの途中イベントの予定は S.slots に持つ（保存される）。引くのは一度だけで、再読み込みや停止・再開で引き直さない */
+function slotsEnsure(){if(!S)return;if(!Array.isArray(S.slots))S.slots=rollSlots();slots=S.slots}
 function runSlot(s){
   const i=slots.indexOf(s);if(i<0)return;slots.splice(i,1);
   if(!S||S.dead||S.decision)return;
@@ -2015,6 +2047,7 @@ function tick(){
   const k=stepMonths(S.age)/3,n=k-(S.q%k);                  // この回の残り四半期数（保存・再開の途中でも境目に揃う）
   for(let i=0;i<n;i++){tickQ();if(S.dead||S.decision)break}
   if(S.q%k===0)S.tk=(S.tk||0)+1;                            // 外側の進行（画面の1回分）の回数。本人の確認待ちの期限の基準
+  S.slots=null;                                             // この回のゲージの途中イベントは使い切った（次の回の分は slotsEnsure() が引く）
   syncStep();
   return true;
 }
@@ -2047,7 +2080,7 @@ function tickQ(){
     }
     return clamp(v+g,0,1000)});
   xpDecay(S,yrs,S.age,XP_DECAY_ME);starAll();   // 使わない力は、★の経験値がゆっくり減る（13歳から）
-  S.npc.forEach(n=>{if(n.known&&!n.dead)n.aff=clamp(n.aff+(S.policy==='交流'?(ad?(Math.random()<0.25?1:0):1):0)+(rnd(5)-2),0,100)});
+  S.npc.forEach(n=>{if(n.known&&!n.dead)n.aff=clamp(n.aff+(S.policy==='交流'?(ad?(rand()<0.25?1:0):1):0)+(rnd(5)-2),0,100)});
   tmReport();                               // 主人公の気質：表示の開始・文字の変化
   // skill (hidden 0-1000; only the level is shown)
   if(S.age>=6){
@@ -2064,7 +2097,7 @@ function tickQ(){
     if(a<0)return;                       // まだ生まれていない弟妹
     npcLife(n,a,yrs,yq);                 // 自分なりの活動・★・気質の変化（主人公の選択とは別）
     const hz=annualHazard(a,NPC_STAM_LINK?n.stats[0]:clamp(560-Math.max(0,a-35)*5,150,600),null);
-    if(a>=MAXAGE||Math.random()<1-Math.exp(-hz.tot*yrs)){
+    if(a>=MAXAGE||rand()<1-Math.exp(-hz.tot*yrs)){
       n.dead=true;n.deadAge=a;
       if(n.known){
         addLog('c',`${n.name}が亡くなった。`,true);hist(i,`亡くなった（${approxAge(a)}）`);lastBubble='…';
@@ -2091,8 +2124,8 @@ function tickQ(){
     if(--S.ongoing.left<=0){addLog('c','体調がすっかり戻った。',true);S.ongoing=null}
   }else{
     const pill=(0.05+S.age/1500)*(ad?0.75:1)*(S.age<6?1.6:1);
-    if(Math.random()<pill){
-      const sev=Math.random()<0.05+S.age/1200;
+    if(rand()<pill){
+      const sev=rand()<0.05+S.age/1200;
       S.ongoing={name:sev?'重い病':'風邪',mult:sev?HZ.sevMult:HZ.illMult,left:ad?4:1+rnd(2)};
       const d=sev?150:60;S.stats[0]=clamp(S.stats[0]-d,0,1000);popQ.push([0,-d]);emo('self','sad');if(sev){S.sx[0]-=70;starAll()}   /* 重い病は、体力の伸びやすさを下げることがある（特別な経験） */
       lastBubble=sev?'ううっ…':'ゴホゴホ…';
@@ -2102,16 +2135,16 @@ function tickQ(){
   stHlSync();
   // death (age-based hazard, raised by low stamina, illness and accidents)
   const h=annualHazard(S.age,S.stats[0],S.ongoing);
-  if(S.age>=MAXAGE||Math.random()<1-Math.exp(-h.tot*yrs)){die(h);saveAutoSoon();return true}
+  if(S.age>=MAXAGE||rand()<1-Math.exp(-h.tot*yrs)){die(h);saveAutoSoon();return true}
   // decision
   if(S.age>=13&&S.t>=S.nextDecT){
-    let d=Math.random()<0.85?evPick('b'):null;       // 設計案の大きな選択（なければ従来の決断）
+    let d=rand()<0.85?evPick('b'):null;       // 設計案の大きな選択（なければ従来の決断）
     if(!d){d=P.dec[S.decCount%P.dec.length];
     for(let k=0;k<P.dec.length;k++){const c=P.dec[(S.decCount+k)%P.dec.length],pn=S.npc[c.who];if(pn&&pn.known&&!pn.dead){d=c;break}}}   /* 相手がいる決断を優先 */
     S.decision=d;lastBubble='どうしよう…！';S.decCount++;S.nextDecT=S.t+(ad?3+rnd(4):2+rnd(3));
     S.nextSmallT=Math.max(S.nextSmallT,S.t+1);
   }else if(S.age>=TIME.SMALL_FROM_AGE&&S.t>=S.nextSmallT){     // 小さな選択：選ぶまで時間が止まる
-    S.decision=(Math.random()<0.85&&evPick('s'))||makeSmall();lastBubble='どうしよう…';S.nextSmallT=S.t+SMALL_GAP(!ad);
+    S.decision=(rand()<0.85&&evPick('s'))||makeSmall();lastBubble='どうしよう…';S.nextSmallT=S.t+SMALL_GAP(!ad);
   }
   saveAutoSoon();
   return true;
@@ -2744,28 +2777,31 @@ function schedule(ms){
     evT.forEach(clearTimeout);evT=[];flushSlots();
     frame++;tick();render();showFx();playSeasons();
     if(S.decision||S.dead){resume=!!S.decision;stop();remaining=null;setBar(0,0);render();return}
-    slots=rollSlots();schedule(SPEEDS[speedIdx][0]);
+    slotsEnsure();schedule(SPEEDS[speedIdx][0]);
   },ms);
 }
 function start(){
   if(timer||S.decision||S.dead)return;
-  if(remaining==null)slots=rollSlots();
+  slotsEnsure();
   schedule(remaining!=null?Math.max(50,remaining):SPEEDS[speedIdx][0]);
   animT=setInterval(()=>{frame++;drawScene()},600);
   render();
 }
 function step(n,untilDecision){
   stop();resume=false;remaining=null;setBar(0,0);
-  const go1=()=>{if(S.decision||S.dead)return false;slots=rollSlots();flushSlots();return tick()};
+  const go1=()=>{if(S.decision||S.dead)return false;slotsEnsure();flushSlots();return tick()};
   for(let i=0;i<n;i++){if(!go1())break;if(S.dead||(untilDecision&&S.decision))break}
   if(untilDecision&&!S.decision&&!S.dead){let g=0;while(!S.decision&&!S.dead&&g++<400)go1()}
   render();showFx();
 }
-function randomBirth(){                                    // 生まれ年を西暦1〜1900年からランダムに引き、その年の時代の境遇を重みで選ぶ
+function randomBirth(){                                    // 生まれ年を西暦1〜1900年からランダムに引き、その年の時代の境遇を重みで選ぶ（人生の乱数 S.rs には触れない）
+  const run=typeof rngFree==='function'?rngFree:(f=>f());
+  return run(()=>{
   const y=1+rnd(1900),c=Object.keys(RANDW).filter(k=>y>=PERSONAS[k].yr[0]&&y<PERSONAS[k].yr[1]);
   const tot=c.reduce((a,k)=>a+RANDW[k],0);let r=Math.random()*tot;
   for(const k of c){r-=RANDW[k];if(r<0)return{pid:k,year:y}}
   return{pid:c[0]||'common',year:y};
+  });
 }
 const randomPersona=()=>randomBirth().pid;
 
@@ -2783,7 +2819,7 @@ const bthEnd=()=>{bthTimers.forEach(clearTimeout);bthTimers=[];const el=$('bth')
 function bthConfetti(){
   const box=document.createElement('div');box.className='cfet';box.setAttribute('aria-hidden','true');
   const cols=['var(--accent)','var(--good)','var(--s-know)','var(--s-will)','var(--s-charm)','var(--warn)'];
-  box.innerHTML=Array.from({length:40},(_,i)=>`<i style="left:${rnd(100)}%;background:${cols[i%cols.length]};animation-delay:${(Math.random()*.6).toFixed(2)}s;animation-duration:${(1.4+Math.random()).toFixed(2)}s"></i>`).join('');
+  box.innerHTML=Array.from({length:40},(_,i)=>`<i style="left:${Math.floor(Math.random()*100)}%;background:${cols[i%cols.length]};animation-delay:${(Math.random()*.6).toFixed(2)}s;animation-duration:${(1.4+Math.random()).toFixed(2)}s"></i>`).join('');
   document.body.appendChild(box);setTimeout(()=>box.remove(),2800);
 }
 /* ランダムで、その境遇に生まれる確率（％）：年が一様、その年に生まれうる境遇の重みで決まる */
@@ -2858,7 +2894,7 @@ function birthCeremony(rand){
   function cert(){
     const fam=S.npc.filter(n=>n.rel==='家族'&&n.known&&!n.dead);
     const older=S.npc.filter(n=>n.rel==='家族'&&n.known&&['兄','姉','次兄','次姉'].includes(n.role)).length;
-    showStep(`<div class="cert"><div class="h2"><div><h1>出生届</h1><span class="no">${S.era}・第${100+rnd(9899)}号</span></div><div class="stampc" aria-hidden="true">受理</div></div>
+    showStep(`<div class="cert"><div class="h2"><div><h1>出生届</h1><span class="no">${S.era}・第${100+hash(S.lid||S.pid)%9899}号</span></div><div class="stampc" aria-hidden="true">受理</div></div>
       <dl>
         <dt>子の名前</dt><dd><input id="bnm" value="${S.myName}" maxlength="12" aria-label="名前" autocomplete="off"><div style="font-size:13.33px;color:var(--muted);font-family:var(--font-sub)">名前は書きかえられる</div></dd>
         <dt>生まれた時</dt><dd>${yr}年（${eraName(yr)}）の春${older?`・第${older+1}子`:''}</dd>
@@ -2894,6 +2930,8 @@ function saveStateOk(s){
   if(!Array.isArray(s.stats)||s.stats.length!==4||!s.stats.every(v=>Number.isFinite(v)&&v>=0&&v<=1000))throw new Error('能力値が不正です');
   if(!Array.isArray(s.npc)||s.npc.length>1000||!s.npc.every(n=>n&&typeof n==='object'&&!Array.isArray(n)))throw new Error('人物データが不正です');
   if(!Array.isArray(s.log)||!Array.isArray(s.chron)||!Array.isArray(s.pending))throw new Error('人生記録が不正です');
+  if(s.rs!=null&&(!Number.isInteger(s.rs)||s.rs<0||s.rs>4294967295))throw new Error('乱数の状態が不正です');
+  if(s.slots!=null&&(!Array.isArray(s.slots)||s.slots.length>20||!s.slots.every(x=>x&&(x.k==='o'||x.k==='l')&&Number.isFinite(x.at)&&x.at>=0&&x.at<=1)))throw new Error('途中イベントの予定が不正です');
   if(s.decision!=null&&(!s.decision||!Array.isArray(s.decision.opts)||!s.decision.opts.length))throw new Error('回答待ちのデータが不正です');
   if(s.npc.some(n=>!Array.isArray(n.stats)||n.stats.length!==4||!n.stats.every(v=>Number.isFinite(v)&&v>=0&&v<=1000)))throw new Error('人物の能力値が不正です');
   return s;
@@ -2947,14 +2985,38 @@ function saveNewLife(){
   saveArmed=true;
   saveAutoNow();
 }
+/* ---- 旧形式（乱数の状態が無い・状態システムが無い）のセーブの原本退避 ----
+   キーは原本の内容の指紋から作る。同じ原本は何度読み込んでも上書きしない。別の原本は別のキーで残す。一覧は索引に持つ。 */
+const SAVE_PREMIG_INDEX=()=>KEY+'-premigrate-index';
+function saveFingerprint(text){let h1=5381,h2=52711;for(let i=0;i<text.length;i++){const c=text.charCodeAt(i);h1=((h1*33)^c)>>>0;h2=((h2*31)+c)>>>0}return h1.toString(36)+h2.toString(36)+text.length.toString(36)}
+function saveNeedsBackup(input){const raw=input&&input.format&&input.state?input.state:input;return !!raw&&typeof raw==='object'&&Array.isArray(raw.stats)&&(raw.rs==null||raw.sv==null)}
+function saveBackupOriginal(input){
+  if(!saveNeedsBackup(input))return true;
+  try{
+    const text=JSON.stringify(input),key=KEY+'-premigrate-'+saveFingerprint(text);
+    if(localStorage.getItem(key)!=null)return true;                 // 同じ原本はすでに退避済み。上書きしない
+    localStorage.setItem(key,text);
+    let idx=[];try{idx=JSON.parse(localStorage.getItem(SAVE_PREMIG_INDEX())||'[]')}catch(e){idx=[]}
+    if(!Array.isArray(idx))idx=[];
+    idx.push({key,at:new Date().toISOString()});
+    localStorage.setItem(SAVE_PREMIG_INDEX(),JSON.stringify(idx));
+    return true;
+  }catch(e){toast('移行前のデータを退避できないため、読み込みを中止しました。JSONを書き出してから、空き容量を確保してください。');return false}
+}
+/* 移行前の原本を、手動セーブの枠へ戻す（移行に失敗した・移行後の人生がおかしいときの復元）。現在の手動セーブは先に別キーへ退避する */
+function saveRestoreOriginal(key){
+  try{
+    const text=localStorage.getItem(key||'');if(!text){toast('移行前のデータがありません。');return false}
+    const cur=localStorage.getItem(KEY);if(cur&&cur!==text)localStorage.setItem(KEY+'-replaced-by-restore',cur);
+    localStorage.setItem(KEY,text);toast('移行前のデータを手動セーブの枠へ戻しました。');return true;
+  }catch(e){toast('戻せませんでした：'+e.message);return false}
+}
 function saveRestore(input,label,protect=true){
+  // 旧データそのものを、移行を試す前に、内容ごとに一度だけ保存する（同じ内容は上書きしない）。移行に失敗してもこの原本は残る。保存できなければ中止する。
+  if(!saveBackupOriginal(input))return false;
   let candidate;
   try{candidate=savePrepare(input)}catch(e){toast('ロードできませんでした：'+e.message);return false}
   if(protect&&!saveProtectPrevious())return false;
-  // 旧データそのものを一度だけ保存してから移行済みデータを適用する。
-  if(input&&input.sv==null){
-    try{if(!localStorage.getItem(KEY+'-premigrate'))localStorage.setItem(KEY+'-premigrate',JSON.stringify(input))}catch(e){}
-  }
   stop();remaining=null;setBar(0,0);resume=false;bthEnd();
   S=candidate;saveArmed=true;evHide();sceneX=null;
   go('life');centerScene();saveAutoNow();

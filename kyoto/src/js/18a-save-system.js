@@ -17,6 +17,8 @@ function saveStateOk(s){
   if(!Array.isArray(s.stats)||s.stats.length!==4||!s.stats.every(v=>Number.isFinite(v)&&v>=0&&v<=1000))throw new Error('能力値が不正です');
   if(!Array.isArray(s.npc)||s.npc.length>1000||!s.npc.every(n=>n&&typeof n==='object'&&!Array.isArray(n)))throw new Error('人物データが不正です');
   if(!Array.isArray(s.log)||!Array.isArray(s.chron)||!Array.isArray(s.pending))throw new Error('人生記録が不正です');
+  if(s.rs!=null&&(!Number.isInteger(s.rs)||s.rs<0||s.rs>4294967295))throw new Error('乱数の状態が不正です');
+  if(s.slots!=null&&(!Array.isArray(s.slots)||s.slots.length>20||!s.slots.every(x=>x&&(x.k==='o'||x.k==='l')&&Number.isFinite(x.at)&&x.at>=0&&x.at<=1)))throw new Error('途中イベントの予定が不正です');
   if(s.decision!=null&&(!s.decision||!Array.isArray(s.decision.opts)||!s.decision.opts.length))throw new Error('回答待ちのデータが不正です');
   if(s.npc.some(n=>!Array.isArray(n.stats)||n.stats.length!==4||!n.stats.every(v=>Number.isFinite(v)&&v>=0&&v<=1000)))throw new Error('人物の能力値が不正です');
   return s;
@@ -70,14 +72,38 @@ function saveNewLife(){
   saveArmed=true;
   saveAutoNow();
 }
+/* ---- 旧形式（乱数の状態が無い・状態システムが無い）のセーブの原本退避 ----
+   キーは原本の内容の指紋から作る。同じ原本は何度読み込んでも上書きしない。別の原本は別のキーで残す。一覧は索引に持つ。 */
+const SAVE_PREMIG_INDEX=()=>KEY+'-premigrate-index';
+function saveFingerprint(text){let h1=5381,h2=52711;for(let i=0;i<text.length;i++){const c=text.charCodeAt(i);h1=((h1*33)^c)>>>0;h2=((h2*31)+c)>>>0}return h1.toString(36)+h2.toString(36)+text.length.toString(36)}
+function saveNeedsBackup(input){const raw=input&&input.format&&input.state?input.state:input;return !!raw&&typeof raw==='object'&&Array.isArray(raw.stats)&&(raw.rs==null||raw.sv==null)}
+function saveBackupOriginal(input){
+  if(!saveNeedsBackup(input))return true;
+  try{
+    const text=JSON.stringify(input),key=KEY+'-premigrate-'+saveFingerprint(text);
+    if(localStorage.getItem(key)!=null)return true;                 // 同じ原本はすでに退避済み。上書きしない
+    localStorage.setItem(key,text);
+    let idx=[];try{idx=JSON.parse(localStorage.getItem(SAVE_PREMIG_INDEX())||'[]')}catch(e){idx=[]}
+    if(!Array.isArray(idx))idx=[];
+    idx.push({key,at:new Date().toISOString()});
+    localStorage.setItem(SAVE_PREMIG_INDEX(),JSON.stringify(idx));
+    return true;
+  }catch(e){toast('移行前のデータを退避できないため、読み込みを中止しました。JSONを書き出してから、空き容量を確保してください。');return false}
+}
+/* 移行前の原本を、手動セーブの枠へ戻す（移行に失敗した・移行後の人生がおかしいときの復元）。現在の手動セーブは先に別キーへ退避する */
+function saveRestoreOriginal(key){
+  try{
+    const text=localStorage.getItem(key||'');if(!text){toast('移行前のデータがありません。');return false}
+    const cur=localStorage.getItem(KEY);if(cur&&cur!==text)localStorage.setItem(KEY+'-replaced-by-restore',cur);
+    localStorage.setItem(KEY,text);toast('移行前のデータを手動セーブの枠へ戻しました。');return true;
+  }catch(e){toast('戻せませんでした：'+e.message);return false}
+}
 function saveRestore(input,label,protect=true){
+  // 旧データそのものを、移行を試す前に、内容ごとに一度だけ保存する（同じ内容は上書きしない）。移行に失敗してもこの原本は残る。保存できなければ中止する。
+  if(!saveBackupOriginal(input))return false;
   let candidate;
   try{candidate=savePrepare(input)}catch(e){toast('ロードできませんでした：'+e.message);return false}
   if(protect&&!saveProtectPrevious())return false;
-  // 旧データそのものを一度だけ保存してから移行済みデータを適用する。
-  if(input&&input.sv==null){
-    try{if(!localStorage.getItem(KEY+'-premigrate'))localStorage.setItem(KEY+'-premigrate',JSON.stringify(input))}catch(e){}
-  }
   stop();remaining=null;setBar(0,0);resume=false;bthEnd();
   S=candidate;saveArmed=true;evHide();sceneX=null;
   go('life');centerScene();saveAutoNow();

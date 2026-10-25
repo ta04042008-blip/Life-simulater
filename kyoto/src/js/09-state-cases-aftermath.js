@@ -154,7 +154,7 @@ function thStep(th){
   const pi=npcIdx(th.tid||th.pid);
   if(th.sk==='ask'){
     th.st='相手返答待ち';
-    if(!th.res)th.res=th.jd==='c'?'ok':(Math.random()<evProb(pi>=0?pi:null,'B')?'ok':'ng');   // 抽選は実行条件が揃った時に一度だけ
+    if(!th.res)th.res=th.jd==='c'?'ok':(rand()<evProb(pi>=0?pi:null,'B')?'ok':'ng');   // 抽選は実行条件が揃った時に一度だけ
     thResolve(th,th.res);
   }else if(th.sk==='plan'){
     if(th.tm&&frLeft()<th.tm){
@@ -164,7 +164,7 @@ function thStep(th){
     }
     if(th.tm)frTake(th.tm);
     let res='ok';
-    if(th.jd==='E'){if(!th.res)th.res=Math.random()<evProb(npcIdx(th.pid),'E')?'ok':'ng';res=th.res}
+    if(th.jd==='E'){if(!th.res)th.res=rand()<evProb(npcIdx(th.pid),'E')?'ok':'ng';res=th.res}
     thResolve(th,res);
   }else if(th.sk==='search'){
     const c=th.cd?stCand(th):-1;

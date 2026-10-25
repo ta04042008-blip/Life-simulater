@@ -57,12 +57,19 @@ const R = await page.evaluate(() => {
     const back = quiet(); newGame('common', 1000); tickQ(); tickQ(); const mid = JSON.parse(JSON.stringify(S));
     tick(); const t1 = S.t, mo1 = S.mo;
     S = migrate(JSON.parse(JSON.stringify(mid))); tick();
-    out.T05.midGaugeResume = { midT: mid.t, afterContinue: S.t, expected: 1, sameAsDirect: S.t === t1 && S.mo === mo1 }; back(); }
+    out.T05.midGaugeResume = { midT: mid.t, afterContinue: S.t, expected: 1, sameAsDirect: S.t === t1 && S.mo === mo1 }; back();
+    // 単位2：回答待ちの保存から2回再開して、回答後60ステップまで同じ結果になる（乱数状態が保存対象）
+    newGame('m90c', 1990); let g2 = 0; while (!S.dead && !S.decision && g2++ < 2000) { if (S.decision) break; slotsEnsure(); flushSlots(); tick(); }
+    const snapD = JSON.stringify(S); const rep = () => { S = migrate(JSON.parse(snapD)); slots = []; choose(0); let k = 0; while (!S.dead && k++ < 60) { if (S.decision) { choose(0); continue } slotsEnsure(); flushSlots(); tick(); } return JSON.stringify(S); };
+    out.T05.reproducible = rep() === rep(); }
   // T06 死亡の確定が一度きり
   { newGame('m90c', 1990); HZ.child = 5; let g = 0; while (!S.dead && g++ < 50) { if (S.decision) { choose(0); continue } tick(); }
     const age = S.deathAge, logs = S.log.length; const again = tick(); const logs2 = S.log.length;
-    out.T06 = { dead: S.dead, tickAfterDeath: again, deathAgeKept: age === S.deathAge, logUnchanged: logs === logs2, deathLogCount: S.log.filter((l) => /亡くなった/.test(JSON.stringify(l))).length };
-    HZ.child = 0.03; }
+    out.T06 = { dead: S.dead, tickAfterDeath: again, deathAgeKept: age === S.deathAge, logUnchanged: logs === logs2, deathLogCount: S.log.filter((l) => /歳で亡くなった。（死因/.test(JSON.stringify(l))).length };
+    HZ.child = 0.03;
+    newGame('common', 1000); let g3 = 0; while (!S.dead && S.age < 30 && g3++ < 2000) { if (S.decision) { choose(0); continue } slotsEnsure(); flushSlots(); tick(); }
+    const snapA = JSON.stringify(S); const dd = []; for (let k = 0; k < 3; k++) { S = migrate(JSON.parse(snapA)); slots = []; let h = 0; while (!S.dead && h++ < 3000) { if (S.decision) { choose(0); continue } slotsEnsure(); flushSlots(); tick(); } dd.push([S.deathAge, S.cause]); }
+    out.T06.sameDeathFromSameSave = dd.every((x) => JSON.stringify(x) === JSON.stringify(dd[0])); }
   // T07 好感度9↔10の相関図（既存 t_map*.mjs で別途検査。ここでは未実施）
   out.T07 = { note: '既存 t_map.mjs/t_map2.mjs の範囲。T07専用の9↔10境界検査は未作成' };
   // T08 能力・★・気質の生成と保存
@@ -99,8 +106,8 @@ add('T02', '20か国版の出生抽選', r.T02.countries ? '未実施' : 'ブロ
   add('T03', '年齢境界の送り幅', ok ? '合格' : '不合格', '年齢→1回分の長さ(年): ' + JSON.stringify(t)); }
 { const t = r.T04, ok = t.infantYearMonths.bad === 0 && t.choiceBeforeAge4 === 0 && t.smallChoiceMidYear.appeared && t.smallChoiceMidYear.elapsedYears === 0.5 && t.deathMidYear.dead && t.deathMidYear.t === 0.25;
   add('T04', '0〜5歳の途中の出来事', ok ? '合格' : '不合格', JSON.stringify(t) + ' ／幼児の選択開始4歳はユーザー決定(A案)'); }
-add('T05', '選択中の再読込・二重回答・時間停止', r.T05.hasDecision && r.T05.timeStoppedWhilePending && r.T05.sameAfterReload && r.T05.answeredOnce && r.T05.midGaugeResume.sameAsDirect ? '一部合格' : '不合格', JSON.stringify(r.T05) + ' ／乱数状態は保存されないため、再開後の未来を完全に同一にする検査は単位2');
-add('T06', '死亡の二重確定', r.T06.dead && !r.T06.tickAfterDeath && r.T06.deathLogCount === 1 ? '一部合格' : '不合格', JSON.stringify(r.T06) + ' ／病気・事故との二重計上は死亡率の再設計後に検査');
+add('T05', '選択中の再読込・二重回答・時間停止', r.T05.hasDecision && r.T05.timeStoppedWhilePending && r.T05.sameAfterReload && r.T05.answeredOnce && r.T05.midGaugeResume.sameAsDirect && r.T05.reproducible ? '合格' : '不合格', JSON.stringify(r.T05) + ' ／詳細な再現性・旧セーブ移行は t_rng.mjs');
+add('T06', '死亡の二重確定', r.T06.dead && !r.T06.tickAfterDeath && r.T06.deathLogCount === 1 && r.T06.sameDeathFromSameSave ? '一部合格' : '不合格', JSON.stringify(r.T06) + ' ／死亡の一度きり確定と再現は合格。病気・事故との二重計上は死亡率の再設計（単位4）後に検査');
 add('T07', '好感度9↔10の相関図', '未実施', r.T07.note);
 add('T08', '能力・★・気質の生成と保存', r.T08.ok ? '合格' : '不合格', JSON.stringify(r.T08) + ' (300人)');
 add('T09', '成長の芽と追憶', r.T09.sprouts ? '未実施' : 'ブロック', '成長の芽・実績・追憶・装備枠の実装なし');

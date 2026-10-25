@@ -71,7 +71,7 @@ function eventPool(){
 function causeOf(h){
   if(S.age>=MAXAGE)return '老衰';
   const base=h.old*h.mb+h.kid,ill=S.ongoing?h.old*h.mb*(h.mi-1)+h.kid*(h.mi-1)*0.4:0;
-  const r=Math.random()*(h.acc+base+ill);
+  const r=rand()*(h.acc+base+ill);
   if(r<h.acc)return '事故';
   if(r<h.acc+ill)return S.ongoing.name==='風邪'?'風邪をこじらせて':'重い病';
   return S.age<6?'幼くして病':S.age>=65?'老衰':'体力の衰え・病';
