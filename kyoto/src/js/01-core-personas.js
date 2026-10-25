@@ -4,7 +4,7 @@ const QL=['春','夏','秋','冬'];
 const BANDS=[[0,'幼児期'],[6,'学童期'],[13,'若年期'],[30,'壮年期'],[60,'高齢期']];
 const bandOf=a=>{let b=BANDS[0][1];for(const [m,n] of BANDS)if(a>=m)b=n;return b};
 const BIRTH_MAX=2025;                   // 出生年は西暦1〜2025年から完全に均等に引く（2026年以降は未実装）
-let MAXAGE=110;                         // 仮の強制上限
+// 寿命に年齢の上限は設けない（死は死亡率だけで決まる）。死亡率の数値は単位4で資料調査と利用者の判断を経て確定するまで【仮】
 const HZ={B:1.5e-5,k:0.09,child:0.03,childDecay:1.1,acc:0.0015,illMult:3,sevMult:6}; // すべて仮の数値
 const RANDW={aristocrat:5,common:45,farm:35,artisan:15};                              // 仮の確率
 function annualHazard(age,v,ill){

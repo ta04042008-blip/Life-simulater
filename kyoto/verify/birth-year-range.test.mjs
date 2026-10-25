@@ -76,11 +76,20 @@ test('every CE 1–2025 birth year has at least one valid, drawable formal perso
 
 test('boundary years 1900/1901, 1925/1926, 1999/2000, 2025/2026 are consistent', () => {
   const eras = (y) => vm.runInContext('eraName(' + y + ')', ctx);
-  assert.equal(eras(1911), '明治'); assert.equal(eras(1912), '大正');
-  assert.equal(eras(1925), '大正'); assert.equal(eras(1926), '昭和');
-  assert.equal(eras(1988), '昭和'); assert.equal(eras(1989), '平成');
-  assert.equal(eras(2018), '平成'); assert.equal(eras(2019), '令和');
-  assert.equal(eras(2025), '令和');
+  const at = (y, m, d) => vm.runInContext('eraAt(' + y + ',' + m + ',' + d + ')', ctx);
+  // 改元の年は両方を表示し、1901〜1925年をすべて「大正」とはしない
+  assert.equal(eras(1900), '明治'); assert.equal(eras(1911), '明治');
+  assert.equal(eras(1912), '明治／大正'); assert.equal(eras(1913), '大正');
+  assert.equal(eras(1925), '大正'); assert.equal(eras(1926), '大正／昭和');
+  assert.equal(eras(1927), '昭和'); assert.equal(eras(1988), '昭和');
+  assert.equal(eras(1989), '昭和／平成'); assert.equal(eras(2018), '平成');
+  assert.equal(eras(2019), '平成／令和'); assert.equal(eras(2020), '令和'); assert.equal(eras(2025), '令和');
+  // 改元日の前日と当日（1912-07-30、1926-12-25、1989-01-08、2019-05-01）
+  assert.equal(at(1912, 7, 29), '明治'); assert.equal(at(1912, 7, 30), '大正');
+  assert.equal(at(1926, 12, 24), '大正'); assert.equal(at(1926, 12, 25), '昭和');
+  assert.equal(at(1989, 1, 7), '昭和'); assert.equal(at(1989, 1, 8), '平成');
+  assert.equal(at(2019, 4, 30), '平成'); assert.equal(at(2019, 5, 1), '令和');
+  assert.equal(at(2019, 12, 31), '令和'); assert.equal(at(1905, 6, 1), '明治'); assert.equal(at(1920, 6, 1), '大正');
   for (const [a, b] of [[1900, 1901], [1925, 1926], [1999, 2000], [2025, 2026]]) {
     for (const y of [a, b]) {
       ctx.rnd = () => y - 1;
@@ -113,4 +122,32 @@ test('a missing-data year is never redrawn and test-only personas never enter fo
   assert.equal(r.gap, true, 'gap must be reported, not hidden');
   assert.equal(r.pid, null);
   assert.equal(calls, 1, 'the year must be drawn exactly once (no redraw)');
+});
+
+test('birth-circumstance weights: every 1901-2025 persona has a managed weight with status, basis and the diversity floor', () => {
+  const table = vm.runInContext('BIRTH_W_TABLE', ctx), floor = vm.runInContext('BIRTH_FLOOR', ctx);
+  assert.ok(floor >= 1);
+  for (const [k, p] of Object.entries(ctx.PERSONAS)) {
+    if (p.yr[0] < 1901) continue;
+    const row = table[k];
+    assert.ok(row, k + ': missing from BIRTH_W_TABLE');
+    assert.ok(['統計', '仮'].includes(row[1]), k + ': status must be 統計 or 仮');
+    assert.ok(typeof row[2] === 'string' && row[2].length > 5, k + ': basis required');
+    assert.ok(row[0] >= floor && ctx.RANDW[k] === row[0], k + ': weight below floor or not applied');
+  }
+});
+
+test('housing and household economy are separate axes for 2000-2025 (share of housing x share of economy)', () => {
+  const h = vm.runInContext('HOUSING_2023', ctx), e = vm.runInContext('ECON', ctx);
+  assert.ok(Math.abs(h.house + h.mansion + h.apart - 100) < 0.01, 'housing shares must sum to 100');
+  assert.ok(Math.abs(e.standard + e.rich - 100) < 0.01, 'economy shares must sum to 100');
+  const w = (k) => ctx.RANDW[k];
+  for (const k of ['house', 'mansion', 'apart']) {
+    assert.ok(Math.abs(w('r_' + k) / w('r_' + k + '_rich') - e.standard / e.rich) < 0.05, k + ': economy ratio');
+  }
+});
+
+test('names switch to the Reiwa set only for people born in 2019 or later', () => {
+  const nf = vm.runInContext('PERSONAS.r_house.nsFrom', ctx);
+  assert.deepEqual(Array.from(nf), [2019, 'reiwa']);
 });

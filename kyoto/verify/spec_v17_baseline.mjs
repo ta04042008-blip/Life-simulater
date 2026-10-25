@@ -90,7 +90,7 @@ const R = await page.evaluate(() => {
   { const steps = play('common', 1000, 40); const bad = steps.filter(([a, d, m]) => Math.round(d * 12) !== m);
     out.T11 = { stepsChecked: steps.length, monthMismatch: bad.length }; }
   // T12 高齢・早世
-  { const sv = { ...HZ }; HZ.B = 0; HZ.child = 0; HZ.acc = 0; play('common', 1000); const old = { deathAge: S.deathAge, cause: S.cause }; Object.assign(HZ, sv);
+  { const sv = { ...HZ }; HZ.B = 0; HZ.child = 0; HZ.acc = 0; play('common', 1000, 130); const old = { deathAge: S.dead ? S.deathAge : null, cause: S.cause, ageNow: S.age, dead: S.dead }; Object.assign(HZ, sv);
     HZ.child = 5; newGame('common', 1000); let g = 0; while (!S.dead && g++ < 50) { if (S.decision) { choose(0); continue } tick(); }
     out.T12 = { zeroHazardDeath: old, earlyDeathAge: S.deathAge, chron: Array.isArray(S.chron) }; HZ.child = 0.03; }
   return out;
@@ -113,7 +113,7 @@ add('T08', '能力・★・気質の生成と保存', r.T08.ok ? '合格' : '不
 add('T09', '成長の芽と追憶', r.T09.sprouts ? '未実施' : 'ブロック', '成長の芽・実績・追憶・装備枠の実装なし');
 add('T10', '2026年以降へ生存', r.T10.livesPast2026 > 0 ? '一部合格' : '不合格', `40人中${r.T10.livesPast2026}人が2026年以降まで生存(最大${r.T10.maxYear}年)。ゲーム内推定の区別・世界データは未実装`);
 add('T11', '内部月次の欠落なし', r.T11.monthMismatch === 0 ? '合格' : '不合格', `${r.T11.stepsChecked}ステップで送り幅と月数の不一致=${r.T11.monthMismatch}（季節演出の省略は別途）`);
-add('T12', '高齢・早世の終了', r.T12.zeroHazardDeath.deathAge === null || r.T12.zeroHazardDeath.deathAge < 110 ? '合格' : '不合格', `確率ゼロでも${r.T12.zeroHazardDeath.deathAge}歳で「${r.T12.zeroHazardDeath.cause}」(強制上限) / 早世${r.T12.earlyDeathAge}歳`);
+add('T12', '高齢・早世の終了', !r.T12.zeroHazardDeath.dead && r.T12.zeroHazardDeath.ageNow >= 130 ? '一部合格' : '不合格', `死亡確率ゼロなら130歳でも生存(強制上限なし。現在${r.T12.zeroHazardDeath.ageNow}歳) / 早世${r.T12.earlyDeathAge}歳 ／新しい死亡率の数値は単位4で確定（現在は【仮】）`);
 
 console.log('v1.7 §10A 現行コード検査（京都版）');
 for (const x of rows) console.log(`${x.id} [${x.status}] ${x.name} — ${x.ev}`);

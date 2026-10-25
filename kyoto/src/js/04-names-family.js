@@ -13,18 +13,21 @@ const NAMEP={
          f:'かずこ ようこ ひろこ みちこ よしこ ちえこ さちこ としこ ふみこ きよこ けいこ なおこ ゆりこ あきこ'.split(' ')},
   mod:{m:'けんじ こうじ たかし まさき ゆうた しんじ ひろき たくや しょうた だいすけ けんた りょう あきら まなぶ ゆうき'.split(' '),
        f:'ゆみ ともこ えみ あやか さとみ まり ちあき かおり めぐみ ようこ ゆか まゆみ なおみ あや'.split(' ')},
-  /* 大正期：しょうぞう・きよし・しげる・みのる／しずこ・きよ・ふみこ は明治安田生命「生まれ年別の名前調査」(1914・1924年の上位)による史実統計。残りは同時代風のゲーム仮定 */
-  taisho:{m:'しょうぞう きよし しげる みのる まさお いさむ ひろし ただし かずお てつお'.split(' '),
+  /* 明治末〜大正期(1901〜1925)：しょうぞう・きよし・しげる・みのる／しずこ・きよ・ふみこ は明治安田生命「生まれ年別の名前調査」(1914・1924年の上位)による史実統計。残りは同時代風のゲーム仮定。1901〜1911年の上位名は資料未確認 */
+  mt:{m:'しょうぞう きよし しげる みのる まさお いさむ ひろし ただし かずお てつお'.split(' '),
           f:'しずこ きよ ふみこ はつ ひさこ まさこ よしこ みつこ ちよこ とみこ'.split(' ')},
-  /* 2000〜2025年：明治安田生命(平成中期・後期の上位)の名前による史実統計。2019年以降の令和の上位は未確認（unit3_sources.md参照） */
+  /* 2000〜2018年：明治安田生命(平成中期・後期の上位)の名前による史実統計。調査対象は同社契約者の子・孫（偏りあり） */
   y2000:{m:'だいき ひろと しょう しゅん れん りく ゆうま はると そうた ゆうと'.split(' '),
          f:'ひな さくら あおい みさき ゆいな りん ゆい めい あかり みお'.split(' ')},
+  /* 2019〜2025年：同調査の各年の上位（蓮2019・2021／蒼・樹2020／蒼・凪2022／碧・陽翔2023・2024／湊2025、女 陽葵2020・2022・2023／紬2021・2024／翠2025／凛・詩）。2019年の女の子の1位は未確認 */
+  reiwa:{m:'れん あおい そう あお なぎ はると みなと いつき あさひ ひなた'.split(' '),
+         f:'ひまり つむぎ すい りん うた めい ひな あおい いろは みお'.split(' ')},
   n:'ゆき あき ちか とき なお まさ ひさ のり よし もと ただ さだ ひろ みち かず てる'.split(' ')
 };
 const roleBase=r=>String(r).replace(/[二三四五六七八九]$/,'');
 const roleSex=r=>{r=roleBase(r);if(/従/.test(r))return 'n';if(/母|姉|妹|女房|娘|妻/.test(r))return 'f';if(/父|兄|弟|息子|夫|親方/.test(r))return 'm';return 'n'};
-function giveName(role,pid,taken){
-  const P=PERSONAS[pid],set=NAMEP[P.ns]||NAMEP.heian,sx=roleSex(role);
+function giveName(role,pid,taken,yr){
+  const P=PERSONAS[pid],nsk=(P.nsFrom&&yr!=null&&yr>=P.nsFrom[0])?P.nsFrom[1]:P.ns,set=NAMEP[nsk]||NAMEP.heian,sx=roleSex(role);   // nsFrom：ある年から名前の型が変わる境遇（2019年〜は令和）
   let pool=sx==='m'?set.m:sx==='f'?set.f:NAMEP.n;
   let free=pool.filter(x=>!taken.has(x));
   if(!free.length){const alt=sx==='n'?[...set.m,...set.f]:pool;free=alt.filter(x=>!taken.has(x))}
@@ -33,8 +36,8 @@ function giveName(role,pid,taken){
 }
 function nameNpcs(s){                      // 役割名のままの人物に、名前をつける（役割は role に残す）。主人公も。
   const taken=new Set(s.npc.filter(n=>n.role!==undefined).map(n=>n.name));if(s.myName)taken.add(s.myName);
-  s.npc.forEach(n=>{if(n.role===undefined){n.role=roleBase(n.name);n.name=giveName(n.role,s.pid,taken);taken.add(n.name)}});
-  if(!s.myName){s.myName=giveName('主人公',s.pid,taken)}
+  s.npc.forEach(n=>{if(n.role===undefined){n.role=roleBase(n.name);n.name=giveName(n.role,s.pid,taken,s.year-(n.off||0));taken.add(n.name)}});
+  if(!s.myName){s.myName=giveName('主人公',s.pid,taken,s.year)}
 }
 // 家族の生成（仮）：n0 が家族の境遇は、もう一人の親だけ追加。親が欠ける場合は祖母が加わる。兄弟姉妹は0〜2人
 const FAMNEED={aristocrat:['父'],common:['父'],farm:['母'],artisan:['母','父']};

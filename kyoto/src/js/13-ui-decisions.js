@@ -109,7 +109,7 @@ function tickQ(){
     if(a<0)return;                       // まだ生まれていない弟妹
     npcLife(n,a,yrs,yq);                 // 自分なりの活動・★・気質の変化（主人公の選択とは別）
     const hz=annualHazard(a,NPC_STAM_LINK?n.stats[0]:clamp(560-Math.max(0,a-35)*5,150,600),null);
-    if(a>=MAXAGE||rand()<1-Math.exp(-hz.tot*yrs)){
+    if(rand()<1-Math.exp(-hz.tot*yrs)){
       n.dead=true;n.deadAge=a;
       if(n.known){
         addLog('c',`${n.name}が亡くなった。`,true);hist(i,`亡くなった（${approxAge(a)}）`);lastBubble='…';
@@ -147,7 +147,7 @@ function tickQ(){
   stHlSync();
   // death (age-based hazard, raised by low stamina, illness and accidents)
   const h=annualHazard(S.age,S.stats[0],S.ongoing);
-  if(S.age>=MAXAGE||rand()<1-Math.exp(-h.tot*yrs)){die(h);saveAutoSoon();return true}
+  if(rand()<1-Math.exp(-h.tot*yrs)){die(h);saveAutoSoon();return true}
   // decision
   if(S.age>=13&&S.t>=S.nextDecT){
     let d=rand()<0.85?evPick('b'):null;       // 設計案の大きな選択（なければ従来の決断）

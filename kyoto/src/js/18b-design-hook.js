@@ -12,7 +12,6 @@ const dzP01=v=>dzNum(v)&&v>=0&&v<=1;
 const dzPair=v=>dzArr(v,2)&&v[0]<=v[1];
 /* 調整できる値：名前 → [読み出し, 書き込み, 形の検査] */
 const DESIGN_VARS={
-  MAXAGE:[()=>MAXAGE,v=>{MAXAGE=v},v=>dzNum(v)&&v>=1&&v<=150],
   HZ:[()=>HZ,v=>Object.assign(HZ,v),v=>dzObj(v,HZ,x=>dzNum(x)&&x>=0)],
   FAM_MISS:[()=>FAM_MISS,v=>{FAM_MISS=v},dzP01],
   FAM_SIB:[()=>FAM_SIB,v=>{FAM_SIB=v.slice()},v=>dzArr(v,3)&&v.every(x=>x>=0)&&Math.abs(v[0]+v[1]+v[2]-100)<1e-9],

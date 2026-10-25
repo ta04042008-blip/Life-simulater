@@ -7,13 +7,14 @@ const r=await page.evaluate(()=>{
   // 寿命：体力を死亡判定に使う（今回）／元の仮の体力曲線を使う（変更前）
   const life=(startAge,link)=>{
     const n=mkPerson(P,startAge);let a=startAge;
-    while(a<MAXAGE){
+    const SIM_MAXAGE=110;   // この分析スクリプト内だけの打ち切り（ゲーム本体に寿命の上限は無い）
+    while(a<SIM_MAXAGE){
       a++;npcLife(n,a,1,false);
       const v=link?n.stats[0]:clamp(560-Math.max(0,a-35)*5,150,600);
       const hz=annualHazard(a,v,null);
       if(Math.random()<1-Math.exp(-hz.tot))return {age:a,n};
     }
-    return {age:MAXAGE,n};
+    return {age:SIM_MAXAGE,n};
   };
   const q=(xs,p)=>{xs=xs.slice().sort((a,b)=>a-b);return xs[Math.floor(xs.length*p)]};
   const sum=(xs)=>({mean:+(xs.reduce((a,b)=>a+b,0)/xs.length).toFixed(1),p10:q(xs,.1),p50:q(xs,.5),p90:q(xs,.9)});

@@ -212,7 +212,6 @@ function numSchema(){
   const st=META.stats, pol=META.policies;
   return [
   {id:'life',title:'寿命と死亡',intro:'毎年、亡くなる確率＝「高齢の分×体力の補正×病気の倍率」＋「乳幼児の分」＋「事故」。境遇による直接の補正はありません。',fields:[
-    {path:['MAXAGE'],shape:'n',label:'寿命の上限',unit:'歳',min:50,max:150,int:true,help:'この年齢になると必ず人生が終わります（強制の上限）。'},
     {path:['HZ','B'],shape:'n',label:'高齢による死亡の起点',unit:'10万分の1',scale:1e5,min:0,max:100,step:0.1,help:'0歳時点の「高齢の分」の大きさ。大きいほど全体に早く亡くなります。'},
     {path:['HZ','k'],shape:'n',label:'年齢による増え方',min:0,max:0.3,step:0.005,help:'1歳ごとに「高齢の分」が約 e^値 倍になります（0.09なら1年で約1.09倍、10年で約2.5倍）。'},
     {path:['HZ','child'],shape:'n',label:'0歳の死亡率のもと',unit:'%',scale:100,min:0,max:50,step:0.1,help:'乳幼児の分の0歳での大きさ。'},

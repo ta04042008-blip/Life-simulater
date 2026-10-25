@@ -25,11 +25,11 @@ const run = (f) => new Promise((res) => {
     clearTimeout(to);
     const text = out.replace(/.*ERR_TUNNEL_CONNECTION_FAILED.*\n?/g, '');
     const hit = BAD.find((re) => re.test(text));
-    res({ f, code, bad: code !== 0 || !!hit, why: code !== 0 ? `exit ${code}` : hit ? String(hit) : '' });
+    res({ f, code, bad: code !== 0 || !!hit, why: code !== 0 ? `exit ${code}` : hit ? String(hit) : '', tail: text.split('\n').filter((l) => /FAIL|PAGEERROR|Error|NG |fail|bad/.test(l)).slice(0, 8).concat(text.trim().split('\n').slice(-4)).map((l) => '      | ' + l.slice(0, 300)).join('\n') });
   });
 });
 const queue = [...files]; const results = [];
-await Promise.all(Array.from({ length: par }, async () => { while (queue.length) { const r = await run(queue.shift()); results.push(r); console.log((r.bad ? 'FAIL ' : 'ok   ') + r.f + (r.why ? '  ← ' + r.why : '')); } }));
+await Promise.all(Array.from({ length: par }, async () => { while (queue.length) { const r = await run(queue.shift()); results.push(r); console.log((r.bad ? 'FAIL ' : 'ok   ') + r.f + (r.why ? '  ← ' + r.why : '')); if (r.bad) console.log(r.tail); } }));
 const nBad = results.filter((r) => r.bad).length;
 console.log(`\n${results.length - nBad}/${results.length} ok`);
 process.exit(nBad ? 1 : 0);

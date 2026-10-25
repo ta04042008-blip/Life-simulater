@@ -6,13 +6,15 @@ const SAVE_PROTECT_KEY='kyoto-kurashi-mihon-v4-before-replace';
 const SAVE_FORMAT='earth2000-kyoto-save', SAVE_EXPORT_VERSION=1;
 let saveArmed=false, savePending=null, saveWarned=false;
 
+/* 保存データの年齢の妥当性検査用（壊れたデータの除外）。ゲーム上の寿命の上限ではない */
+const AGE_SANITY=400;
 function saveSnapshot(){return JSON.stringify(S)}
 function saveStateOk(s){
   if(!s||typeof s!=='object'||Array.isArray(s))throw new Error('保存形式が不正です');
   if(!Object.prototype.hasOwnProperty.call(PERSONAS,s.pid))throw new Error('不明な境遇です');
   if(typeof s.ver==='number'&&s.ver>5)throw new Error('新しい版のセーブデータです');
   if(s.sv!=null&&(!Number.isInteger(s.sv)||s.sv>1||s.sv<0))throw new Error('対応していない状態システムの版です');
-  if(!Number.isFinite(s.age)||s.age<0||s.age>110||!Number.isFinite(s.year)||s.year<0||!Number.isFinite(s.t)||s.t<0)throw new Error('年齢・年・経過時間が不正です');
+  if(!Number.isFinite(s.age)||s.age<0||s.age>AGE_SANITY||!Number.isFinite(s.year)||s.year<0||!Number.isFinite(s.t)||s.t<0)throw new Error('年齢・年・経過時間が不正です');
   if(!['q','y'].includes(s.mode)||!Number.isInteger(s.q)||s.q<0||s.q>3)throw new Error('進行状態が不正です');
   if(!Array.isArray(s.stats)||s.stats.length!==4||!s.stats.every(v=>Number.isFinite(v)&&v>=0&&v<=1000))throw new Error('能力値が不正です');
   if(!Array.isArray(s.npc)||s.npc.length>1000||!s.npc.every(n=>n&&typeof n==='object'&&!Array.isArray(n)))throw new Error('人物データが不正です');

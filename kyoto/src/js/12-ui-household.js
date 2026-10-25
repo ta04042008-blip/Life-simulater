@@ -69,7 +69,6 @@ function eventPool(){
   return pool.concat(evAutoPool());
 }
 function causeOf(h){
-  if(S.age>=MAXAGE)return '老衰';
   const base=h.old*h.mb+h.kid,ill=S.ongoing?h.old*h.mb*(h.mi-1)+h.kid*(h.mi-1)*0.4:0;
   const r=rand()*(h.acc+base+ill);
   if(r<h.acc)return '事故';
